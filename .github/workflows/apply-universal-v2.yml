@@ -22,6 +22,11 @@ jobs:
         with:
           fetch-depth: 0
 
+      - name: Set up Node 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
       - name: Reconstruct universal Flow source
         run: |
           set -euxo pipefail
@@ -38,9 +43,11 @@ jobs:
 
           test -f package.json
           test -f tests/verify-browser.mjs
-          test -f src/screens/direction.js
-          test -f src/screens/adapt.js
+          test -f src/features/goals/goal-view.js
+          test -f src/features/adapt/adapt-view.js
           test -f docs/WORK_POLICY.md
+          test -f src/core/config.example.js
+          cp src/core/config.example.js src/core/config.js
 
       - name: Verify JavaScript syntax
         run: |
@@ -59,6 +66,7 @@ jobs:
           rm -rf migration
           rm -f .github/workflows/apply-universal.yml
           rm -f .github/workflows/apply-universal-v2.yml
+          rm -f src/core/config.js
           git config user.name 'Flow Tribe CI'
           git config user.email 'actions@users.noreply.github.com'
           git add -A
