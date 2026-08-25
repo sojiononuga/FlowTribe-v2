@@ -1,4 +1,4 @@
-name: bootstrap universal Flow
+name: import stable Flow source
 
 on:
   push:
@@ -11,12 +11,26 @@ permissions:
   contents: write
 
 jobs:
-  bootstrap:
-    if: false
+  import:
+    if: github.actor != 'github-actions[bot]'
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
       - name: Check out target repository
         uses: actions/checkout@v4
-      - name: Bootstrap paused while transfer payload is repaired
-        run: echo "Bootstrap paused"
+        with:
+          fetch-depth: 0
+
+      - name: Fetch inherited stable source
+        run: git clone --depth=1 https://github.com/IyanuoluwaIlesanmi/FlowTribe-v2.git /tmp/upstream
+
+      - name: Import source cleanly
+        run: |
+          rsync -a --delete --exclude='.git' /tmp/upstream/ ./
+          rm -rf bootstrap
+          rm -f .github/workflows/bootstrap-universal.yml
+          git config user.name "Flow Tribe CI"
+          git config user.email "actions@users.noreply.github.com"
+          git add -A
+          git commit -m "chore: import stable inherited Flow source"
+          git push origin HEAD:main
