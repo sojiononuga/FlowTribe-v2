@@ -1,0 +1,23 @@
+# Local configuration — holds the deployment URL for this environment.
+# Copy src/core/config.example.js to create it.
+src/core/config.js
+
+# clasp credentials and the project id that ties this checkout to a script.
+.clasp.json
+.clasprc.json
+
+# Dependencies (only used by the test harness; no runtime dependencies).
+node_modules/
+
+# OS and editor noise
+.DS_Store
+Thumbs.db
+desktop.ini
+*.swp
+.idea/
+.vscode/*
+!.vscode/settings.json
+
+# Logs and local scratch
+*.log
+.tmp/

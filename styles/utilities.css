@@ -1,0 +1,180 @@
+/* ==========================================================================
+   Flow Tribe — Utilities
+   --------------------------------------------------------------------------
+   A deliberately small set. This is NOT a utility framework: if a rule is
+   needed three times in one component, it belongs in that component's CSS,
+   not here. Utilities exist for layout scaffolding and one-off spacing that
+   would otherwise force a meaningless wrapper class.
+   ========================================================================== */
+
+/* ---- Layout containers ---------------------------------------------------- */
+
+.ft-container {
+  width: 100%;
+  max-width: var(--ft-container-md);
+  margin-inline: auto;
+  padding-inline: var(--ft-space-4);
+}
+
+.ft-container--sm { max-width: var(--ft-container-sm); }
+.ft-container--lg { max-width: var(--ft-container-lg); }
+.ft-container--xl { max-width: var(--ft-container-xl); }
+
+@media (min-width: 768px) {
+  .ft-container {
+    padding-inline: var(--ft-space-6);
+  }
+}
+
+/* ---- Flex & grid ---------------------------------------------------------- */
+
+.ft-stack {
+  display: flex;
+  flex-direction: column;
+}
+
+.ft-row {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+}
+
+.ft-row--between { justify-content: space-between; }
+.ft-row--center  { justify-content: center; }
+.ft-row--end     { justify-content: flex-end; }
+.ft-row--top     { align-items: flex-start; }
+.ft-row--wrap    { flex-wrap: wrap; }
+
+.ft-gap-1 { gap: var(--ft-space-1); }
+.ft-gap-2 { gap: var(--ft-space-2); }
+.ft-gap-3 { gap: var(--ft-space-3); }
+.ft-gap-4 { gap: var(--ft-space-4); }
+.ft-gap-5 { gap: var(--ft-space-5); }
+.ft-gap-6 { gap: var(--ft-space-6); }
+.ft-gap-8 { gap: var(--ft-space-8); }
+
+.ft-grow   { flex: 1 1 auto; }
+.ft-shrink-0 { flex-shrink: 0; }
+
+/* Two-column grid that collapses to one on small screens — the stats grid
+   and most admin card rows use this. */
+.ft-grid {
+  display: grid;
+  gap: var(--ft-space-3);
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+@media (min-width: 768px) {
+  .ft-grid--4 {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+  .ft-grid--3 {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+/* ---- Spacing (margin only; padding belongs to components) ----------------- */
+
+.ft-mt-1 { margin-top: var(--ft-space-1); }
+.ft-mt-2 { margin-top: var(--ft-space-2); }
+.ft-mt-3 { margin-top: var(--ft-space-3); }
+.ft-mt-4 { margin-top: var(--ft-space-4); }
+.ft-mt-6 { margin-top: var(--ft-space-6); }
+.ft-mt-8 { margin-top: var(--ft-space-8); }
+.ft-mb-1 { margin-bottom: var(--ft-space-1); }
+.ft-mb-2 { margin-bottom: var(--ft-space-2); }
+.ft-mb-3 { margin-bottom: var(--ft-space-3); }
+.ft-mb-4 { margin-bottom: var(--ft-space-4); }
+.ft-mb-6 { margin-bottom: var(--ft-space-6); }
+.ft-mb-8 { margin-bottom: var(--ft-space-8); }
+
+/* ---- Text ----------------------------------------------------------------- */
+
+.ft-text-center { text-align: center; }
+.ft-text-right  { text-align: right; }
+
+.ft-text-xs  { font-size: var(--ft-text-xs); }
+.ft-text-sm  { font-size: var(--ft-text-sm); }
+.ft-text-lg  { font-size: var(--ft-text-lg); }
+.ft-text-xl  { font-size: var(--ft-text-xl); }
+
+.ft-text-muted     { color: var(--ft-text-muted); }
+.ft-text-secondary { color: var(--ft-text-secondary); }
+.ft-text-brand     { color: var(--ft-text-brand); }
+.ft-text-accent    { color: var(--ft-text-accent); }
+.ft-text-success   { color: var(--ft-success-700); }
+.ft-text-danger    { color: var(--ft-danger-700); }
+
+/* Icon state colours. Icons are stroked with currentColor, so setting the
+   colour on the wrapper is all that is needed — no icon-specific CSS. */
+.ft-icon-default  { color: var(--ft-icon-default); }
+.ft-icon-active   { color: var(--ft-icon-active); }
+.ft-icon-success  { color: var(--ft-icon-success); }
+.ft-icon-warning  { color: var(--ft-icon-warning); }
+.ft-icon-error    { color: var(--ft-icon-error); }
+.ft-icon-disabled { color: var(--ft-icon-disabled); }
+
+/* Icon sizing by context, for the cases not already covered by a component
+   rule. Matches the Design System's six sizes. */
+.ft-icon-nav     { width: var(--ft-icon-nav);     height: var(--ft-icon-nav); }
+.ft-icon-btn     { width: var(--ft-icon-button);  height: var(--ft-icon-button); }
+.ft-icon-card    { width: var(--ft-icon-card);    height: var(--ft-icon-card); }
+.ft-icon-stat    { width: var(--ft-icon-stat);    height: var(--ft-icon-stat); }
+.ft-icon-empty   { width: var(--ft-icon-empty);   height: var(--ft-icon-empty); }
+.ft-icon-feature { width: var(--ft-icon-feature); height: var(--ft-icon-feature); }
+
+.ft-font-medium   { font-weight: var(--ft-weight-medium); }
+.ft-font-semibold { font-weight: var(--ft-weight-semibold); }
+.ft-font-bold     { font-weight: var(--ft-weight-bold); }
+
+/* Display numerals — the progress-ring figure, stat values. Tabular figures
+   stop numbers jittering when they change. */
+.ft-numeral {
+  font-family: var(--ft-font-display);
+  font-weight: var(--ft-weight-bold);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: var(--ft-tracking-tight);
+}
+
+/* Truncate to one line — member names in tables, submitted URLs. */
+.ft-truncate {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
+}
+
+/* ---- Responsive visibility ------------------------------------------------ */
+
+.ft-hide-mobile { display: none; }
+
+@media (min-width: 768px) {
+  .ft-hide-mobile   { display: revert; }
+  .ft-hide-desktop  { display: none; }
+}
+
+/* ---- Motion helpers ------------------------------------------------------- */
+
+.ft-animate-in {
+  animation: ft-rise-in var(--ft-duration-base) var(--ft-ease-out) both;
+}
+
+/* Staggered entrance for lists. Applied to a parent; children rise in turn.
+   Capped at 6 so a long list never feels slow to arrive. */
+.ft-stagger > * {
+  animation: ft-rise-in var(--ft-duration-base) var(--ft-ease-out) both;
+}
+.ft-stagger > *:nth-child(1) { animation-delay: 0ms; }
+.ft-stagger > *:nth-child(2) { animation-delay: 40ms; }
+.ft-stagger > *:nth-child(3) { animation-delay: 80ms; }
+.ft-stagger > *:nth-child(4) { animation-delay: 120ms; }
+.ft-stagger > *:nth-child(5) { animation-delay: 160ms; }
+.ft-stagger > *:nth-child(n + 6) { animation-delay: 200ms; }
+
+/* ---- Scroll containment ---------------------------------------------------
+   Wide content (tables, chart canvases) scrolls inside its own box so the
+   page body never scrolls sideways on a phone. */
+.ft-scroll-x {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}

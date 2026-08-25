@@ -1,0 +1,790 @@
+/* ==========================================================================
+   Flow Tribe — Admin
+   --------------------------------------------------------------------------
+   Loaded only by admin.html. Every value comes from tokens.css: the admin
+   dashboard is the management interface of the same product, not a second
+   product with its own look.
+
+   The one place it deliberately differs is density. Admin screens carry tables
+   and are used on a laptop, so spacing tightens and the container widens.
+   Nothing about the palette, type, radii, or motion changes.
+   ========================================================================== */
+
+/* ==========================================================================
+   Admin navigation
+   ========================================================================== */
+
+.ft-adminnav {
+  display: flex;
+  gap: var(--ft-space-1);
+  width: 100%;
+  max-width: var(--ft-container-xl);
+  margin-inline: auto;
+  padding: var(--ft-space-3) var(--ft-space-4) 0;
+  /* Horizontal scroll on narrow screens rather than wrapping to two rows,
+     which would push content below the fold on a laptop. */
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.ft-adminnav::-webkit-scrollbar { display: none; }
+
+.ft-adminnav__item {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--ft-space-2);
+  flex-shrink: 0;
+  padding: var(--ft-space-2) var(--ft-space-3);
+  border-radius: var(--ft-radius-md);
+  font-size: var(--ft-text-sm);
+  font-weight: var(--ft-weight-medium);
+  color: var(--ft-text-secondary);
+  white-space: nowrap;
+  transition:
+    background-color var(--ft-duration-fast) var(--ft-ease-standard),
+    color var(--ft-duration-fast) var(--ft-ease-standard);
+}
+
+.ft-adminnav__item:hover {
+  background-color: var(--ft-neutral-100);
+  color: var(--ft-text-primary);
+}
+
+.ft-adminnav__item--active {
+  background-color: var(--ft-burgundy-50);
+  color: var(--ft-burgundy-700);
+  font-weight: var(--ft-weight-semibold);
+}
+
+.ft-adminnav__icon {
+  width: var(--ft-icon-nav);
+  height: var(--ft-icon-nav);
+  flex-shrink: 0;
+}
+
+.ft-admin-tag {
+  align-self: center;
+  padding: 2px var(--ft-space-2);
+  background-color: var(--ft-burgundy-600);
+  color: var(--ft-text-inverse);
+  border-radius: var(--ft-radius-xs);
+  font-size: var(--ft-text-2xs);
+  font-weight: var(--ft-weight-bold);
+  letter-spacing: var(--ft-tracking-wide);
+  text-transform: uppercase;
+}
+
+@media (min-width: 768px) {
+  .ft-adminnav { padding-inline: var(--ft-space-6); }
+}
+
+/* ==========================================================================
+   Desktop — admin left sidebar
+   --------------------------------------------------------------------------
+   Mirrors the member sidebar. Below 1024px the nav stays the horizontal
+   scrolling strip it already was: the Design System's mobile pattern here is
+   a slide-out drawer, which is new interactive behaviour rather than a
+   restyling, and is deliberately not built.
+
+   The admin shell is constructed WITHOUT a bottomNav, so AppShell gives it
+   `ft-shell--no-nav` and the member selector above cannot match it. Keying on
+   the presence of .ft-adminnav is what distinguishes "no navigation at all"
+   from "navigation that is not a bottom bar".
+   ========================================================================== */
+
+@media (min-width: 1024px) {
+  .ft-shell:has(> .ft-adminnav) {
+    display: grid;
+    grid-template-columns: var(--ft-sidebar-width) minmax(0, 1fr);
+    grid-template-rows: auto minmax(0, 1fr);
+    grid-template-areas:
+      'topbar topbar'
+      'nav    main';
+  }
+
+  .ft-shell:has(> .ft-adminnav) > .ft-topbar     { grid-area: topbar; }
+  .ft-shell:has(> .ft-adminnav) > .ft-adminnav   { grid-area: nav; }
+  .ft-shell:has(> .ft-adminnav) > .ft-shell__main { grid-area: main; }
+
+  .ft-adminnav {
+    position: sticky;
+    top: var(--ft-header-height);
+    align-self: start;
+    height: calc(100dvh - var(--ft-header-height));
+    flex-direction: column;
+    align-items: stretch;
+    gap: 2px;
+    /* The horizontal strip centred itself inside the page container; as a
+       column it fills its grid track instead. */
+    max-width: none;
+    margin-inline: 0;
+    padding: var(--ft-space-4) var(--ft-space-3);
+    border-right: 1px solid var(--ft-border-subtle);
+    overflow-x: hidden;
+    overflow-y: auto;
+  }
+
+  .ft-adminnav__item {
+    display: flex;
+    justify-content: flex-start;
+    gap: var(--ft-space-3);
+    padding: var(--ft-space-3);
+  }
+}
+
+/* ==========================================================================
+   Layout
+   ========================================================================== */
+
+.ft-admin-controls {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ft-space-3);
+}
+
+.ft-admin-metrics {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--ft-space-3);
+}
+
+@media (min-width: 768px) {
+  .ft-admin-metrics { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+}
+
+@media (min-width: 1280px) {
+  .ft-admin-metrics { grid-template-columns: repeat(auto-fit, minmax(10rem, 1fr)); }
+}
+
+.ft-admin-error { padding-block: var(--ft-space-6); }
+
+.ft-admin-panel + .ft-admin-panel { margin-top: var(--ft-space-6); }
+
+.ft-admin-panel__title {
+  font-size: var(--ft-text-xs);
+  font-weight: var(--ft-weight-bold);
+  letter-spacing: var(--ft-tracking-widest);
+  text-transform: uppercase;
+  color: var(--ft-text-muted);
+  margin-bottom: var(--ft-space-4);
+}
+
+.ft-admin-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--ft-space-2);
+}
+
+.ft-admin-actions > .ft-btn { flex: 1 1 12rem; }
+
+@media (min-width: 768px) {
+  .ft-admin-actions > .ft-btn { flex: 0 0 auto; }
+}
+
+/* ==========================================================================
+   Table
+   --------------------------------------------------------------------------
+   Below 768px the table becomes a stack of cards. A table squeezed onto a
+   phone is unreadable, and horizontal scrolling hides exactly the columns
+   someone is looking for. One markup structure serves both: each cell carries
+   its column label in data-label, revealed only in card mode.
+   ========================================================================== */
+
+.ft-table-wrap { width: 100%; }
+
+.ft-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--ft-text-sm);
+}
+
+.ft-table th {
+  padding: var(--ft-space-3) var(--ft-space-4);
+  text-align: left;
+  font-size: var(--ft-text-2xs);
+  font-weight: var(--ft-weight-bold);
+  letter-spacing: var(--ft-tracking-wide);
+  text-transform: uppercase;
+  color: var(--ft-text-muted);
+  border-bottom: 1px solid var(--ft-border-subtle);
+  white-space: nowrap;
+}
+
+.ft-table td {
+  padding: var(--ft-space-3) var(--ft-space-4);
+  border-bottom: 1px solid var(--ft-border-subtle);
+  vertical-align: middle;
+}
+
+.ft-table tbody tr:last-child td { border-bottom: none; }
+
+.ft-table__cell--numeric {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.ft-table__row--interactive { cursor: pointer; }
+
+.ft-table__row--interactive:hover td { background-color: var(--ft-bg-sunken); }
+
+.ft-table__row--interactive:focus-visible {
+  outline: 2px solid var(--ft-burgundy-600);
+  outline-offset: -2px;
+}
+
+.ft-table-empty { padding: var(--ft-space-6); }
+
+.ft-table-skeleton {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ft-space-4);
+  padding: var(--ft-space-5);
+}
+
+.ft-table-skeleton__row {
+  display: flex;
+  align-items: center;
+  gap: var(--ft-space-4);
+}
+
+.ft-table-skeleton__row > * { flex: 1; }
+
+/* ---- Card mode ---- */
+@media (max-width: 767px) {
+  .ft-table thead { display: none; }
+
+  .ft-table,
+  .ft-table tbody,
+  .ft-table tr,
+  .ft-table td { display: block; width: 100%; }
+
+  .ft-table tr {
+    padding: var(--ft-space-4);
+    border-bottom: 1px solid var(--ft-border-subtle);
+  }
+
+  .ft-table tr:last-child { border-bottom: none; }
+
+  .ft-table td {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--ft-space-4);
+    padding: var(--ft-space-1) 0;
+    border: none;
+    text-align: right;
+  }
+
+  /* The label travels with the value, so a card row still says what it is. */
+  .ft-table td::before {
+    content: attr(data-label);
+    flex-shrink: 0;
+    font-size: var(--ft-text-xs);
+    font-weight: var(--ft-weight-medium);
+    color: var(--ft-text-muted);
+    text-align: left;
+  }
+
+  /* The primary column leads the card, so it reads as a heading. */
+  .ft-table__cell--primary {
+    padding-bottom: var(--ft-space-2);
+  }
+
+  .ft-table td:empty { display: none; }
+}
+
+/* ==========================================================================
+   Pagination · search · filters
+   ========================================================================== */
+
+.ft-pagination {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--ft-space-3);
+  flex-wrap: wrap;
+}
+
+.ft-pagination__summary {
+  font-size: var(--ft-text-sm);
+  color: var(--ft-text-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.ft-search {
+  position: relative;
+  display: flex;
+  align-items: center;
+  width: 100%;
+}
+
+.ft-search__icon {
+  position: absolute;
+  left: var(--ft-space-4);
+  display: flex;
+  width: 1.125rem;
+  height: 1.125rem;
+  color: var(--ft-text-muted);
+  pointer-events: none;
+}
+
+.ft-search__input {
+  padding-left: calc(var(--ft-space-4) * 2 + 1.125rem);
+}
+
+/* Remove the browser's own clear affordance; it sits oddly with our styling. */
+.ft-search__input::-webkit-search-cancel-button { -webkit-appearance: none; }
+
+.ft-filterbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: var(--ft-space-3);
+}
+
+.ft-filterbar__field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ft-space-1);
+  min-width: 0;
+  flex: 1 1 9rem;
+}
+
+.ft-filterbar__label {
+  font-size: var(--ft-text-2xs);
+  font-weight: var(--ft-weight-semibold);
+  letter-spacing: var(--ft-tracking-wide);
+  text-transform: uppercase;
+  color: var(--ft-text-muted);
+}
+
+.ft-select--sm {
+  min-height: 2.5rem;
+  padding-block: var(--ft-space-2);
+  font-size: var(--ft-text-sm);
+}
+
+@media (min-width: 768px) {
+  .ft-filterbar__field { flex: 0 1 11rem; }
+}
+
+/* ==========================================================================
+   Segmented control
+   ========================================================================== */
+
+.ft-segmented {
+  display: inline-flex;
+  gap: 2px;
+  padding: 3px;
+  background-color: var(--ft-bg-sunken);
+  border-radius: var(--ft-radius-md);
+  overflow-x: auto;
+  max-width: 100%;
+  scrollbar-width: none;
+}
+
+.ft-segmented::-webkit-scrollbar { display: none; }
+
+.ft-segmented__option {
+  flex-shrink: 0;
+  padding: var(--ft-space-2) var(--ft-space-4);
+  border-radius: var(--ft-radius-sm);
+  font-size: var(--ft-text-sm);
+  font-weight: var(--ft-weight-medium);
+  color: var(--ft-text-secondary);
+  white-space: nowrap;
+  transition:
+    background-color var(--ft-duration-fast) var(--ft-ease-standard),
+    color var(--ft-duration-fast) var(--ft-ease-standard);
+}
+
+.ft-segmented__option:hover { color: var(--ft-text-primary); }
+
+.ft-segmented__option--active {
+  background-color: var(--ft-bg-surface);
+  color: var(--ft-burgundy-700);
+  font-weight: var(--ft-weight-semibold);
+  box-shadow: var(--ft-shadow-xs);
+}
+
+/* ==========================================================================
+   Detail list
+   ========================================================================== */
+
+.ft-detail-list {
+  display: grid;
+  gap: var(--ft-space-3);
+  margin: 0;
+}
+
+.ft-detail-list__item {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--ft-space-4);
+  padding-bottom: var(--ft-space-3);
+  border-bottom: 1px solid var(--ft-border-subtle);
+}
+
+.ft-detail-list__item:last-child { border-bottom: none; padding-bottom: 0; }
+
+.ft-detail-list__label {
+  font-size: var(--ft-text-sm);
+  color: var(--ft-text-muted);
+  flex-shrink: 0;
+}
+
+.ft-detail-list__value {
+  margin: 0;
+  font-size: var(--ft-text-sm);
+  font-weight: var(--ft-weight-medium);
+  text-align: right;
+  min-width: 0;
+  overflow-wrap: break-word;
+}
+
+@media (min-width: 768px) {
+  .ft-detail-list { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--ft-space-3) var(--ft-space-8); }
+}
+
+/* ==========================================================================
+   Overview
+   ========================================================================== */
+
+.ft-mini-board { display: flex; flex-direction: column; }
+
+.ft-mini-board__row {
+  display: flex;
+  align-items: center;
+  gap: var(--ft-space-3);
+  padding: var(--ft-space-3) var(--ft-space-5);
+  border-bottom: 1px solid var(--ft-border-subtle);
+}
+
+.ft-mini-board__row:last-child { border-bottom: none; }
+
+.ft-mini-board__rank {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.75rem;
+  height: 1.75rem;
+  flex-shrink: 0;
+  border-radius: var(--ft-radius-full);
+  background-color: var(--ft-bg-sunken);
+  font-family: var(--ft-font-display);
+  font-size: var(--ft-text-sm);
+  font-weight: var(--ft-weight-bold);
+  color: var(--ft-text-secondary);
+}
+
+.ft-mini-board__rank--podium {
+  background-color: var(--ft-gold-50);
+  color: var(--ft-gold-700);
+}
+
+.ft-mini-board__body {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex: 1;
+  min-width: 0;
+}
+
+.ft-mini-board__count {
+  display: flex;
+  align-items: baseline;
+  gap: var(--ft-space-1);
+  flex-shrink: 0;
+}
+
+.ft-admin-jump {
+  display: grid;
+  gap: var(--ft-space-3);
+  grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr));
+}
+
+.ft-jump-card {
+  display: flex;
+  align-items: center;
+  gap: var(--ft-space-3);
+  padding: var(--ft-space-4);
+  background-color: var(--ft-bg-surface);
+  border: 1px solid var(--ft-border-subtle);
+  border-radius: var(--ft-radius-lg);
+  transition:
+    transform var(--ft-duration-fast) var(--ft-ease-standard),
+    box-shadow var(--ft-duration-fast) var(--ft-ease-standard);
+}
+
+.ft-jump-card:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--ft-shadow-md);
+  color: inherit;
+}
+
+.ft-jump-card__icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.25rem;
+  height: 2.25rem;
+  flex-shrink: 0;
+  border-radius: var(--ft-radius-md);
+  background-color: var(--ft-burgundy-50);
+  color: var(--ft-burgundy-600);
+}
+
+.ft-jump-card__icon svg { width: 1.125rem; height: 1.125rem; }
+
+.ft-jump-card__body { display: flex; flex-direction: column; gap: 1px; flex: 1; min-width: 0; }
+.ft-jump-card__title { font-size: var(--ft-text-sm); font-weight: var(--ft-weight-semibold); }
+.ft-jump-card__description { font-size: var(--ft-text-xs); color: var(--ft-text-muted); }
+.ft-jump-card__chevron { width: 1rem; height: 1rem; color: var(--ft-text-muted); flex-shrink: 0; }
+
+/* ==========================================================================
+   Champion card
+   ========================================================================== */
+
+.ft-champion { display: flex; flex-direction: column; gap: var(--ft-space-1); }
+
+.ft-champion__eyebrow {
+  font-size: var(--ft-text-2xs);
+  letter-spacing: var(--ft-tracking-wide);
+  text-transform: uppercase;
+  opacity: 0.75;
+}
+
+.ft-champion__name {
+  font-family: var(--ft-font-display);
+  font-size: var(--ft-text-2xl);
+  font-weight: var(--ft-weight-bold);
+  line-height: 1.1;
+}
+
+.ft-champion__meta { font-size: var(--ft-text-sm); opacity: 0.85; }
+
+.ft-champion__note {
+  margin-top: var(--ft-space-2);
+  font-size: var(--ft-text-xs);
+  opacity: 0.7;
+  line-height: var(--ft-leading-snug);
+}
+
+/* ==========================================================================
+   Links, invite codes, audit
+   ========================================================================== */
+
+.ft-admin-link {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--ft-space-1);
+  max-width: 16rem;
+  color: var(--ft-text-brand);
+}
+
+.ft-admin-link__icon { width: 0.875rem; height: 0.875rem; flex-shrink: 0; opacity: 0.6; }
+
+.ft-admin-recent { display: flex; flex-direction: column; gap: var(--ft-space-2); }
+
+.ft-admin-recent__row {
+  display: flex;
+  align-items: baseline;
+  gap: var(--ft-space-3);
+  min-width: 0;
+}
+
+.ft-code-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--ft-space-2);
+  padding: var(--ft-space-1) var(--ft-space-2);
+  background-color: var(--ft-bg-sunken);
+  border: 1px solid var(--ft-border-subtle);
+  border-radius: var(--ft-radius-sm);
+  font-family: var(--ft-font-mono);
+  font-size: var(--ft-text-sm);
+  letter-spacing: 0.08em;
+  cursor: pointer;
+  transition: background-color var(--ft-duration-fast) var(--ft-ease-standard);
+}
+
+.ft-code-chip:hover { background-color: var(--ft-burgundy-50); }
+
+.ft-code-chip--lg {
+  justify-content: space-between;
+  width: 100%;
+  padding: var(--ft-space-3);
+  font-size: var(--ft-text-md);
+}
+
+.ft-code-chip__value { font-weight: var(--ft-weight-semibold); }
+.ft-code-chip__icon { width: 0.875rem; height: 0.875rem; opacity: 0.5; flex-shrink: 0; }
+
+.ft-code-grid {
+  display: grid;
+  gap: var(--ft-space-2);
+  grid-template-columns: repeat(auto-fit, minmax(9rem, 1fr));
+  max-height: 16rem;
+  overflow-y: auto;
+}
+
+.ft-audit-detail {
+  display: block;
+  max-width: 20rem;
+  font-family: var(--ft-font-mono);
+  font-size: var(--ft-text-2xs);
+  color: var(--ft-text-muted);
+  overflow-wrap: anywhere;
+}
+
+.ft-setting-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--ft-space-4);
+  flex-wrap: wrap;
+}
+
+.ft-setting-row__label {
+  font-size: var(--ft-text-sm);
+  font-weight: var(--ft-weight-semibold);
+}
+
+/* ==========================================================================
+   Charts
+   ========================================================================== */
+
+.ft-analytics {
+  display: grid;
+  gap: var(--ft-space-4);
+  grid-template-columns: 1fr;
+}
+
+@media (min-width: 1024px) {
+  .ft-analytics { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+.ft-chart-panel__header { margin-bottom: var(--ft-space-4); }
+
+.ft-chart-panel__title {
+  font-size: var(--ft-text-md);
+  font-weight: var(--ft-weight-bold);
+  letter-spacing: var(--ft-tracking-tight);
+}
+
+.ft-chart-panel__description {
+  margin-top: 2px;
+  font-size: var(--ft-text-xs);
+  color: var(--ft-text-muted);
+  line-height: var(--ft-leading-snug);
+}
+
+.ft-chart {
+  width: 100%;
+  height: 11rem;
+  overflow: visible;
+}
+
+.ft-chart__axis {
+  font-family: var(--ft-font-sans);
+  font-size: 10px;
+  fill: var(--ft-text-muted);
+}
+
+/* ---- Distribution ---- */
+
+.ft-distribution { display: flex; flex-direction: column; gap: var(--ft-space-3); }
+
+.ft-distribution__row {
+  display: grid;
+  grid-template-columns: 6.5rem 1fr auto;
+  align-items: center;
+  gap: var(--ft-space-3);
+}
+
+.ft-distribution__label {
+  font-size: var(--ft-text-sm);
+  color: var(--ft-text-secondary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ft-distribution__track {
+  height: 0.625rem;
+  background-color: var(--ft-bg-sunken);
+  border-radius: var(--ft-radius-full);
+  overflow: hidden;
+}
+
+.ft-distribution__fill {
+  display: block;
+  height: 100%;
+  border-radius: var(--ft-radius-full);
+  transition: width var(--ft-duration-slow) var(--ft-ease-out);
+}
+
+.ft-distribution__value {
+  display: flex;
+  align-items: baseline;
+  gap: var(--ft-space-2);
+  font-size: var(--ft-text-sm);
+}
+
+.ft-distribution__percent { font-size: var(--ft-text-xs); color: var(--ft-text-muted); }
+
+/* ---- Heatmap ----
+   Same visual language as a member's Activity Calendar, so an admin reads
+   community rhythm the way a member reads their own. */
+
+.ft-heatmap { display: flex; flex-direction: column; gap: var(--ft-space-2); }
+
+.ft-heatmap__grid {
+  display: flex;
+  gap: 3px;
+  overflow-x: auto;
+  padding-bottom: var(--ft-space-1);
+  scrollbar-width: thin;
+}
+
+.ft-heatmap__week { display: flex; flex-direction: column; gap: 3px; flex-shrink: 0; }
+
+.ft-heatmap__days {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.ft-heatmap__cell {
+  width: 0.75rem;
+  height: 0.75rem;
+  border-radius: 2px;
+  background-color: var(--ft-neutral-100);
+}
+
+.ft-heatmap__cell--l0 { background-color: var(--ft-neutral-100); }
+.ft-heatmap__cell--l1 { background-color: var(--ft-burgundy-100); }
+.ft-heatmap__cell--l2 { background-color: var(--ft-burgundy-300); }
+.ft-heatmap__cell--l3 { background-color: var(--ft-burgundy-500); }
+.ft-heatmap__cell--l4 { background-color: var(--ft-burgundy-700); }
+
+/* A day that has not happened yet is outlined rather than filled, so the
+   current week does not read as a sudden collapse in activity. */
+.ft-heatmap__cell--lf {
+  background-color: transparent;
+  border: 1px dashed var(--ft-border-subtle);
+}
+
+.ft-heatmap__legend {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 3px;
+}
+
+.ft-heatmap__legend > span:first-child,
+.ft-heatmap__legend > span:last-child { margin-inline: var(--ft-space-2); }

@@ -1,0 +1,120 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Flow Tribe · Backend Verification</title>
+    <meta name="robots" content="noindex, nofollow" />
+
+    <!--
+      Backend verification harness.
+
+      WHAT THIS CAN AND CANNOT PROVE
+
+      Can: every .gs file parses; every module initialises; every expected
+      global exists and has the expected shape; the action table is complete
+      and every action declares a capability and a handler; the capability
+      matrix grants and denies what the spec says; the pure business logic
+      produces the right answers against fixtures; and the whole request path
+      runs end to end against an in-memory fake of SpreadsheetApp.
+
+      Cannot: prove Apps Script's own runtime behaves as the fake does, prove
+      real Sheets latency, or prove the deployment configuration. Those need a
+      live deploy — which is exactly the split we agreed for Phase 5a and 5b.
+
+      Files load as plain <script> tags, not modules, because Apps Script has
+      no module system either: this mirrors how they will actually be
+      concatenated into one global scope.
+    -->
+
+    <style>
+      body {
+        margin: 0;
+        padding: 2rem 1.25rem 4rem;
+        font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+        font-size: 13px;
+        line-height: 1.6;
+        background: #fcfafa;
+        color: #2b2626;
+      }
+      main { max-width: 60rem; margin-inline: auto; }
+      h1 { font-size: 1.4rem; margin: 0 0 0.25rem; letter-spacing: -0.02em; }
+      .sub { color: #7d7373; margin: 0 0 1.5rem; }
+      .summary {
+        padding: 1rem 1.25rem;
+        border-radius: 0.75rem;
+        font-weight: 700;
+        margin-bottom: 1.5rem;
+      }
+      .summary.pass { background: #eaf6ee; color: #165c2d; }
+      .summary.fail { background: #fbeceb; color: #8f2a20; }
+      .group { margin-bottom: 1.5rem; }
+      .group h2 {
+        font-size: 0.75rem;
+        text-transform: uppercase;
+        letter-spacing: 0.14em;
+        color: #7d7373;
+        margin: 0 0 0.5rem;
+      }
+      .case { padding: 2px 0 2px 1.5rem; position: relative; }
+      .case::before { position: absolute; left: 0; font-weight: 700; }
+      .ok::before { content: 'PASS'; color: #1f7a3d; font-size: 10px; top: 4px; }
+      .no::before { content: 'FAIL'; color: #c0392b; font-size: 10px; top: 4px; }
+      .no { color: #8f2a20; }
+      .detail { color: #7d7373; padding-left: 1.5rem; font-size: 12px; }
+    </style>
+  </head>
+
+  <body>
+    <main>
+      <h1>Backend verification</h1>
+      <p class="sub">
+        The full Apps Script backend, loaded into one global scope and exercised
+        against an in-memory spreadsheet.
+      </p>
+      <div id="out"></div>
+    </main>
+
+    <!--
+      1. A fake of every Google global the backend touches. Loaded FIRST so the
+         modules below find what they expect at call time.
+    -->
+    <script src="fakes/GoogleFakes.js"></script>
+
+    <!--
+      2. The backend, in the same alphabetical order Apps Script uses.
+         If any file has a syntax error or a load-time dependency it should not
+         have, the page fails here and the harness reports zero tests.
+    -->
+    <script src="../appsscript/00_Config.gs"></script>
+    <script src="../appsscript/01_Errors.gs"></script>
+    <script src="../appsscript/02_Envelope.gs"></script>
+    <script src="../appsscript/03_Router.gs"></script>
+    <script src="../appsscript/lib/FtWeek.js"></script>
+    <script src="../appsscript/lib/FtDayMap.js"></script>
+    <script src="../appsscript/lib/FtStreak.js"></script>
+    <script src="../appsscript/lib/FtLink.js"></script>
+    <script src="../appsscript/lib/FtIdentity.js"></script>
+    <script src="../appsscript/lib/FtAchievements.js"></script>
+    <script src="../appsscript/infra/Infra.gs"></script>
+    <script src="../appsscript/repositories/Repositories.gs"></script>
+    <script src="../appsscript/services/CoreServices.gs"></script>
+    <script src="../appsscript/services/DomainServices.gs"></script>
+    <script src="../appsscript/middleware/Middleware.gs"></script>
+    <script src="../appsscript/orchestrators/Orchestrators.gs"></script>
+    <script src="../appsscript/controllers/Controllers.gs"></script>
+    <script src="../appsscript/jobs/Jobs.gs"></script>
+    <script src="../appsscript/setup/Setup.gs"></script>
+    <script src="../appsscript/setup/SmokeTest.gs"></script>
+
+    <!--
+      3. The suite.
+
+      Loaded as a module so it can statically import src/lib/icons.js and
+      check the seeded catalog against the REAL icon set rather than against
+      a copy of it that would drift. Module scripts run after every classic
+      script above, so the backend globals are already in place.
+    -->
+    <script type="module" src="backend-suite.js"></script>
+  </body>
+</html>

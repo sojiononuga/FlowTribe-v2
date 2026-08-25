@@ -1,0 +1,581 @@
+/* ==========================================================================
+   Flow Tribe — Activity Calendar, Milestones, Flow Levels
+   --------------------------------------------------------------------------
+   The Track and Celebrate surfaces.
+   ========================================================================== */
+
+/* ==========================================================================
+   Activity Calendar
+   --------------------------------------------------------------------------
+   Levels are driven by custom properties rather than literal colours, so a
+   future theme — or the switch from binary to intensity — is a variable
+   override and not a rewrite.
+   ========================================================================== */
+
+.ft-calendar {
+  --ft-cal-cell: 13px;
+  --ft-cal-gap: 3px;
+  --ft-cal-radius: 3px;
+
+  /* Binary today; l2–l4 are ready for colour intensity. */
+  --ft-cal-l0: var(--ft-neutral-100);
+  --ft-cal-l1: var(--ft-burgundy-600);
+  --ft-cal-l2: var(--ft-burgundy-600);
+  --ft-cal-l3: var(--ft-burgundy-700);
+  --ft-cal-l4: var(--ft-burgundy-800);
+
+  display: flex;
+  flex-direction: column;
+  gap: var(--ft-space-3);
+}
+
+@media (min-width: 768px) {
+  .ft-calendar {
+    --ft-cal-cell: 15px;
+    --ft-cal-gap: 4px;
+  }
+}
+
+.ft-calendar__grid {
+  display: flex;
+  gap: var(--ft-space-2);
+  align-items: flex-start;
+}
+
+/* ---- Weekday gutter ---- */
+
+.ft-calendar__weekdays {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ft-cal-gap);
+  flex-shrink: 0;
+  /* Offset by the month-label row so weekdays align with their squares. */
+  padding-top: calc(var(--ft-text-2xs) * 1.6 + var(--ft-cal-gap));
+}
+
+.ft-calendar__weekday {
+  height: var(--ft-cal-cell);
+  line-height: var(--ft-cal-cell);
+  font-size: var(--ft-text-2xs);
+  color: var(--ft-text-muted);
+  text-align: right;
+  min-width: 1.8rem;
+}
+
+/* ---- Scroller ----
+   53 weeks does not fit a phone. The grid scrolls inside its own box, pinned
+   to the current week, so the page body never scrolls sideways. */
+
+.ft-calendar__scroller {
+  overflow-x: auto;
+  overflow-y: hidden;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: thin;
+  /* Room for the today ring, which draws outside the cell bounds. */
+  padding: 2px;
+  margin: -2px;
+}
+
+.ft-calendar__columns {
+  display: flex;
+  gap: var(--ft-cal-gap);
+  width: max-content;
+}
+
+.ft-calendar__week {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ft-cal-gap);
+}
+
+.ft-calendar__month {
+  height: calc(var(--ft-text-2xs) * 1.6);
+  font-size: var(--ft-text-2xs);
+  color: var(--ft-text-muted);
+  white-space: nowrap;
+  line-height: 1.6;
+}
+
+.ft-calendar__month--hidden {
+  visibility: hidden;
+}
+
+/* ---- Day squares ---- */
+
+.ft-calendar__day,
+.ft-calendar__pad {
+  width: var(--ft-cal-cell);
+  height: var(--ft-cal-cell);
+  border-radius: var(--ft-cal-radius);
+  flex-shrink: 0;
+}
+
+.ft-calendar__pad {
+  background: transparent;
+}
+
+.ft-calendar__day {
+  background-color: var(--ft-cal-l0);
+  /* A hairline inside the square keeps empty days legible on a white card
+     without adding a second colour. */
+  box-shadow: inset 0 0 0 1px rgba(91, 0, 0, 0.05);
+  transition:
+    transform var(--ft-duration-fast) var(--ft-ease-spring),
+    box-shadow var(--ft-duration-fast) var(--ft-ease-standard);
+}
+
+.ft-calendar__day--l1 { background-color: var(--ft-cal-l1); box-shadow: none; }
+.ft-calendar__day--l2 { background-color: var(--ft-cal-l2); box-shadow: none; }
+.ft-calendar__day--l3 { background-color: var(--ft-cal-l3); box-shadow: none; }
+.ft-calendar__day--l4 { background-color: var(--ft-cal-l4); box-shadow: none; }
+
+.ft-calendar__day[tabindex='0'] { cursor: pointer; }
+
+.ft-calendar__day:hover {
+  transform: scale(1.25);
+  box-shadow: 0 0 0 1px var(--ft-burgundy-300);
+}
+
+.ft-calendar__day:focus-visible {
+  outline: 2px solid var(--ft-burgundy-600);
+  outline-offset: 1px;
+}
+
+/* Today carries a gold ring — always identifiable, whether or not it is
+   filled. This is the one square a member looks for. */
+.ft-calendar__day--today {
+  box-shadow: 0 0 0 2px var(--ft-gold-400);
+}
+
+.ft-calendar__day--today:hover {
+  box-shadow: 0 0 0 2px var(--ft-gold-500);
+}
+
+/* Days after today in the current week: present, so the grid stays
+   rectangular, but visually absent. */
+.ft-calendar__day--future {
+  background-color: transparent;
+  box-shadow: inset 0 0 0 1px var(--ft-neutral-100);
+}
+
+/* ---- Footer ---- */
+
+.ft-calendar__footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--ft-space-3);
+  flex-wrap: wrap;
+}
+
+.ft-calendar__detail {
+  font-size: var(--ft-text-xs);
+  color: var(--ft-text-secondary);
+  min-height: 1.2em;
+}
+
+.ft-calendar__legend {
+  display: flex;
+  align-items: center;
+  gap: var(--ft-cal-gap);
+}
+
+.ft-calendar__legend-label {
+  font-size: var(--ft-text-2xs);
+  color: var(--ft-text-muted);
+  margin-inline: var(--ft-space-1);
+}
+
+.ft-calendar__legend .ft-calendar__day:hover {
+  transform: none;
+  box-shadow: none;
+}
+
+/* ==========================================================================
+   Milestone medallion
+   ========================================================================== */
+
+.ft-badge-medal {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 3rem;
+  height: 3rem;
+  border-radius: var(--ft-radius-full);
+  background-color: var(--ft-burgundy-50);
+  color: var(--ft-burgundy-600);
+  transition:
+    transform var(--ft-duration-base) var(--ft-ease-spring),
+    background-color var(--ft-duration-base) var(--ft-ease-standard);
+}
+
+.ft-badge-medal--sm { width: 2.25rem; height: 2.25rem; }
+.ft-badge-medal--lg { width: 4.5rem; height: 4.5rem; }
+
+.ft-badge-medal__icon {
+  width: 50%;
+  height: 50%;
+}
+
+/* Rarity treatments. Restrained on purpose — the difference should be felt
+   rather than announced, which is what "premium rather than flashy" means
+   in practice. */
+.ft-badge-medal--common {
+  background-color: var(--ft-burgundy-50);
+  color: var(--ft-burgundy-600);
+}
+
+.ft-badge-medal--uncommon {
+  background-color: var(--ft-success-50);
+  color: var(--ft-success-700);
+}
+
+.ft-badge-medal--rare {
+  background-color: var(--ft-gold-50);
+  color: var(--ft-gold-700);
+}
+
+/* Legendary is the only one that gets a gradient, so it stays rare visually
+   as well as by definition. */
+.ft-badge-medal--legendary {
+  background-image: linear-gradient(140deg, var(--ft-gold-300), var(--ft-gold-500));
+  color: var(--ft-burgundy-900);
+  box-shadow: var(--ft-shadow-sm);
+}
+
+.ft-badge-medal--locked {
+  background-color: var(--ft-neutral-100);
+  color: var(--ft-neutral-400);
+}
+
+/* The unlock moment. Applied where a milestone is being celebrated rather
+   than merely listed: a soft gold halo that swells once and settles,
+   alongside the badge's own scale-in. Restrained on purpose — the Design
+   System asks for "rewarding, not distracting". */
+.ft-badge-medal--celebrate {
+  animation:
+    ft-pop-in var(--ft-duration-celebrate) var(--ft-ease-spring) both,
+    ft-glow var(--ft-duration-celebrate) var(--ft-ease-out) both;
+}
+
+/* ==========================================================================
+   Milestone card
+   ========================================================================== */
+
+.ft-milestone {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--ft-space-2);
+  padding: var(--ft-space-4) var(--ft-space-3);
+  background-color: var(--ft-bg-surface);
+  border: 1px solid var(--ft-border-subtle);
+  border-radius: var(--ft-radius-lg);
+  text-align: center;
+  cursor: pointer;
+  transition:
+    transform var(--ft-duration-fast) var(--ft-ease-standard),
+    border-color var(--ft-duration-fast) var(--ft-ease-standard),
+    box-shadow var(--ft-duration-fast) var(--ft-ease-standard);
+}
+
+.ft-milestone:hover {
+  transform: translateY(-2px);
+  border-color: var(--ft-burgundy-200);
+  box-shadow: var(--ft-shadow-sm);
+}
+
+.ft-milestone:hover .ft-badge-medal {
+  transform: scale(1.06);
+}
+
+.ft-milestone--locked {
+  background-color: var(--ft-bg-sunken);
+}
+
+.ft-milestone--locked .ft-milestone__name {
+  color: var(--ft-text-muted);
+}
+
+.ft-milestone__name {
+  font-size: var(--ft-text-xs);
+  font-weight: var(--ft-weight-semibold);
+  line-height: var(--ft-leading-snug);
+}
+
+.ft-milestone__status {
+  font-size: var(--ft-text-2xs);
+  color: var(--ft-text-muted);
+}
+
+.ft-milestone--unlocked .ft-milestone__status {
+  color: var(--ft-success-700);
+  font-weight: var(--ft-weight-medium);
+}
+
+.ft-milestone-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(6.5rem, 1fr));
+  gap: var(--ft-space-3);
+}
+
+/* ==========================================================================
+   Next milestone
+   ========================================================================== */
+
+.ft-next-milestone {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--ft-space-4);
+  width: 100%;
+  padding: var(--ft-space-4);
+  background-color: var(--ft-bg-surface);
+  border: 1px solid var(--ft-border-subtle);
+  border-radius: var(--ft-radius-lg);
+  text-align: left;
+  cursor: pointer;
+  transition: border-color var(--ft-duration-fast) var(--ft-ease-standard);
+}
+
+.ft-next-milestone:hover {
+  border-color: var(--ft-burgundy-200);
+}
+
+.ft-next-milestone--complete {
+  cursor: default;
+}
+
+.ft-next-milestone__body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ft-space-1);
+  flex: 1;
+  min-width: 0;
+}
+
+.ft-next-milestone__label {
+  font-size: var(--ft-text-2xs);
+  font-weight: var(--ft-weight-semibold);
+  letter-spacing: var(--ft-tracking-wide);
+  text-transform: uppercase;
+  color: var(--ft-text-muted);
+}
+
+.ft-next-milestone__name {
+  font-size: var(--ft-text-md);
+  font-weight: var(--ft-weight-bold);
+}
+
+.ft-next-milestone__remaining {
+  font-size: var(--ft-text-xs);
+  color: var(--ft-text-secondary);
+}
+
+/* ==========================================================================
+   Progress bar
+   ========================================================================== */
+
+.ft-progressbar {
+  display: flex;
+  align-items: center;
+  gap: var(--ft-space-2);
+  width: 100%;
+}
+
+.ft-progressbar::before {
+  content: '';
+  flex: 1;
+  height: 6px;
+  border-radius: var(--ft-radius-full);
+  background-color: var(--ft-neutral-100);
+  order: -2;
+}
+
+/* The fill overlays the track. Absolute positioning keeps the label from
+   being pushed around as the value changes. */
+.ft-progressbar {
+  position: relative;
+}
+
+.ft-progressbar__fill {
+  position: absolute;
+  left: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  height: 6px;
+  max-width: 100%;
+  border-radius: var(--ft-radius-full);
+  background-color: var(--ft-gold-400);
+  transition: width var(--ft-duration-slow) var(--ft-ease-out);
+}
+
+.ft-progressbar--compact::before { height: 4px; }
+.ft-progressbar--compact .ft-progressbar__fill { height: 4px; }
+
+.ft-progressbar--success .ft-progressbar__fill {
+  background-color: var(--ft-success-500);
+}
+
+.ft-progressbar__label {
+  font-size: var(--ft-text-2xs);
+  font-variant-numeric: tabular-nums;
+  color: var(--ft-text-muted);
+  flex-shrink: 0;
+  min-width: 3.5rem;
+  text-align: right;
+}
+
+/* ==========================================================================
+   Flow Levels
+   ========================================================================== */
+
+.ft-level-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--ft-space-2);
+  padding: var(--ft-space-1) var(--ft-space-3);
+  background-color: var(--ft-burgundy-50);
+  color: var(--ft-burgundy-700);
+  border-radius: var(--ft-radius-full);
+  font-size: var(--ft-text-sm);
+  font-weight: var(--ft-weight-semibold);
+  white-space: nowrap;
+}
+
+.ft-level-chip--sm {
+  padding: 2px var(--ft-space-2);
+  font-size: var(--ft-text-2xs);
+  gap: var(--ft-space-1);
+}
+
+.ft-level-chip__icon {
+  width: 1em;
+  height: 1em;
+  flex-shrink: 0;
+}
+
+/* ---- The progression track ---- */
+
+.ft-level-track {
+  display: flex;
+  flex-direction: column;
+}
+
+.ft-level-step {
+  position: relative;
+  display: flex;
+  gap: var(--ft-space-4);
+  padding-bottom: var(--ft-space-6);
+}
+
+.ft-level-step:last-child {
+  padding-bottom: 0;
+}
+
+/* The connecting line, drawn behind the markers. */
+.ft-level-step:not(:last-child)::before {
+  content: '';
+  position: absolute;
+  left: 1.25rem;
+  top: 2.5rem;
+  bottom: 0;
+  width: 2px;
+  background-color: var(--ft-border-subtle);
+}
+
+.ft-level-step--reached:not(:last-child)::before {
+  background-color: var(--ft-burgundy-300);
+}
+
+.ft-level-step__marker {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 2.5rem;
+  height: 2.5rem;
+  border-radius: var(--ft-radius-full);
+  background-color: var(--ft-bg-surface);
+  border: 2px solid var(--ft-border-default);
+  color: var(--ft-neutral-400);
+}
+
+.ft-level-step__marker svg {
+  width: 1.1rem;
+  height: 1.1rem;
+}
+
+.ft-level-step--reached .ft-level-step__marker {
+  border-color: var(--ft-burgundy-600);
+  color: var(--ft-burgundy-600);
+}
+
+.ft-level-step--current .ft-level-step__marker {
+  background-color: var(--ft-burgundy-600);
+  border-color: var(--ft-burgundy-600);
+  color: var(--ft-text-inverse);
+  box-shadow: 0 0 0 4px var(--ft-burgundy-50);
+}
+
+.ft-level-step__body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ft-space-1);
+  padding-top: var(--ft-space-1);
+  min-width: 0;
+}
+
+.ft-level-step__head {
+  display: flex;
+  align-items: center;
+  gap: var(--ft-space-2);
+  flex-wrap: wrap;
+}
+
+.ft-level-step__name {
+  font-weight: var(--ft-weight-bold);
+}
+
+.ft-level-step--reached .ft-level-step__name {
+  color: var(--ft-burgundy-700);
+}
+
+.ft-level-step__description {
+  font-size: var(--ft-text-sm);
+  color: var(--ft-text-secondary);
+  line-height: var(--ft-leading-snug);
+}
+
+.ft-level-step__requirement {
+  font-size: var(--ft-text-xs);
+  color: var(--ft-text-muted);
+}
+
+/* ---- Progress toward next level ---- */
+
+.ft-level-progress {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ft-space-3);
+}
+
+.ft-level-progress__label {
+  font-size: var(--ft-text-sm);
+  color: var(--ft-text-secondary);
+}
+
+.ft-level-progress__row {
+  display: flex;
+  align-items: center;
+  gap: var(--ft-space-3);
+}
+
+.ft-level-progress__metric {
+  font-size: var(--ft-text-xs);
+  color: var(--ft-text-muted);
+  min-width: 4.5rem;
+  flex-shrink: 0;
+}

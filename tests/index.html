@@ -1,0 +1,109 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Flow Tribe · Tests</title>
+    <meta name="robots" content="noindex, nofollow" />
+
+    <link rel="stylesheet" href="../styles/tokens.css" />
+    <link rel="stylesheet" href="../styles/reset.css" />
+    <link rel="stylesheet" href="../styles/base.css" />
+
+    <style>
+      body { padding: 2rem 1.25rem; max-width: 60rem; margin-inline: auto; }
+      h1 { margin-bottom: .25rem; }
+      .lede { color: var(--ft-text-secondary); margin-bottom: 2rem; }
+      .summary { padding: 1rem 1.25rem; border-radius: var(--ft-radius-lg); margin-bottom: 2rem; font-weight: 600; }
+      .summary.pass { background: var(--ft-success-50); color: var(--ft-success-700); }
+      .summary.fail { background: var(--ft-danger-50); color: var(--ft-danger-700); }
+      .group { margin-bottom: 1.75rem; }
+      .group h2 { font-size: var(--ft-text-sm); text-transform: uppercase;
+        letter-spacing: var(--ft-tracking-wide); color: var(--ft-text-muted); margin-bottom: .5rem; }
+      .case { display: flex; gap: .625rem; padding: .3rem 0; font-size: var(--ft-text-sm);
+        border-bottom: 1px solid var(--ft-border-subtle); }
+      .case:last-child { border-bottom: none; }
+      .mark { flex-shrink: 0; width: 1.25rem; font-weight: 700; }
+      .pass .mark { color: var(--ft-success-500); }
+      .fail .mark { color: var(--ft-danger-500); }
+      .case.fail .name { color: var(--ft-danger-700); }
+      .msg { display: block; color: var(--ft-danger-500); font-size: var(--ft-text-xs);
+        margin-top: .2rem; font-family: var(--ft-font-mono); }
+    </style>
+  </head>
+
+  <body>
+    <h1>Business logic tests</h1>
+    <p class="lede">
+      The pure modules in <code>appsscript/lib/</code> — week boundaries, streaks, ranking, the
+      packed calendar, link validation, identity policy, milestones, and levels. These decide who
+      is publicly celebrated, so they are the part that has to be right.
+    </p>
+
+    <div id="summary" class="summary">Running…</div>
+    <div id="results"></div>
+
+    <!--
+      Plain scripts, not modules. This mirrors how Apps Script actually loads
+      these files — one shared global scope, no imports — so the tests run under
+      the same conditions as production rather than a friendlier approximation.
+    -->
+    <script src="../appsscript/lib/FtWeek.js"></script>
+    <script src="../appsscript/lib/FtDayMap.js"></script>
+    <script src="../appsscript/lib/FtStreak.js"></script>
+    <script src="../appsscript/lib/FtLink.js"></script>
+    <script src="../appsscript/lib/FtIdentity.js"></script>
+    <script src="../appsscript/lib/FtAchievements.js"></script>
+    <script src="suite.js"></script>
+
+    <script>
+      (function () {
+        var summary = FtTests.summary();
+
+        var box = document.getElementById('summary');
+        box.className = 'summary ' + (summary.failed === 0 ? 'pass' : 'fail');
+        box.textContent =
+          summary.failed === 0
+            ? summary.passed + ' of ' + summary.total + ' passing'
+            : summary.failed + ' failing, ' + summary.passed + ' passing';
+
+        var out = document.getElementById('results');
+
+        FtTests.results.forEach(function (group) {
+          var section = document.createElement('div');
+          section.className = 'group';
+
+          var heading = document.createElement('h2');
+          heading.textContent = group.name;
+          section.appendChild(heading);
+
+          group.cases.forEach(function (c) {
+            var row = document.createElement('div');
+            row.className = 'case ' + (c.ok ? 'pass' : 'fail');
+
+            var mark = document.createElement('span');
+            mark.className = 'mark';
+            mark.textContent = c.ok ? 'PASS' : 'FAIL';
+
+            var name = document.createElement('span');
+            name.className = 'name';
+            name.textContent = c.name;
+
+            if (!c.ok) {
+              var msg = document.createElement('span');
+              msg.className = 'msg';
+              msg.textContent = c.message;
+              name.appendChild(msg);
+            }
+
+            row.appendChild(mark);
+            row.appendChild(name);
+            section.appendChild(row);
+          });
+
+          out.appendChild(section);
+        });
+      })();
+    </script>
+  </body>
+</html>

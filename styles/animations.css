@@ -1,0 +1,157 @@
+/* ==========================================================================
+   Flow Tribe — Animations
+   --------------------------------------------------------------------------
+   Shared keyframes. Components reference these by name rather than defining
+   their own, so motion stays consistent across the app.
+
+   Every animation here respects prefers-reduced-motion via the collapsed
+   durations in tokens.css. The two that convey no information at all
+   (shimmer, burst) are additionally suppressed at the bottom of this file.
+   ========================================================================== */
+
+/* ---- Entrances ------------------------------------------------------------ */
+
+@keyframes ft-fade-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+@keyframes ft-fade-out {
+  from { opacity: 1; }
+  to   { opacity: 0; }
+}
+
+/* Rise is the default entrance for cards and page content: a small upward
+   move reads as "arriving" without the theatrics of a large slide. */
+@keyframes ft-rise-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes ft-slide-up {
+  from { transform: translateY(100%); }
+  to   { transform: translateY(0); }
+}
+
+@keyframes ft-slide-down-out {
+  from { transform: translateY(0); }
+  to   { transform: translateY(100%); }
+}
+
+/* Used by modals. The slight scale-up makes the dialog feel like it comes
+   forward rather than simply appearing. */
+@keyframes ft-scale-in {
+  from {
+    opacity: 0;
+    transform: scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+/* ---- Feedback ------------------------------------------------------------- */
+
+@keyframes ft-spin {
+  to { transform: rotate(360deg); }
+}
+
+/* Skeleton shimmer. Slow and low-contrast on purpose — a fast, bright
+   shimmer draws more attention than the content it stands in for. */
+@keyframes ft-shimmer {
+  from { background-position: -200% 0; }
+  to   { background-position: 200% 0; }
+}
+
+/* Error shake. Short and small: enough to notice, not enough to alarm. */
+@keyframes ft-shake {
+  0%, 100% { transform: translateX(0); }
+  20%      { transform: translateX(-5px); }
+  40%      { transform: translateX(5px); }
+  60%      { transform: translateX(-3px); }
+  80%      { transform: translateX(3px); }
+}
+
+/* ---- Celebration ----------------------------------------------------------
+   Reserved for genuine achievement: a logged post, a goal met. Used sparingly
+   so it keeps meaning something. */
+
+@keyframes ft-pop-in {
+  0%   { opacity: 0; transform: scale(0.4); }
+  60%  { opacity: 1; transform: scale(1.08); }
+  100% { opacity: 1; transform: scale(1); }
+}
+
+/* Draws a checkmark by animating its stroke. */
+@keyframes ft-draw-check {
+  from { stroke-dashoffset: 48; }
+  to   { stroke-dashoffset: 0; }
+}
+
+/* A single burst ray, expanding and fading outward. */
+@keyframes ft-burst {
+  0% {
+    opacity: 1;
+    transform: rotate(var(--ft-burst-angle, 0deg)) translateY(0) scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: rotate(var(--ft-burst-angle, 0deg)) translateY(-46px) scale(0.4);
+  }
+}
+
+/* The progress ring's stroke sweeping to its value on load. */
+@keyframes ft-ring-fill {
+  from { stroke-dashoffset: var(--ft-ring-circumference); }
+  to   { stroke-dashoffset: var(--ft-ring-offset); }
+}
+
+/* Gentle attention pull for a primary CTA that has gone untouched. */
+/* The unlock glow. A soft halo that swells once and settles, rather than a
+   pulse that keeps going — the moment should feel marked, not alarmed. */
+@keyframes ft-glow {
+  0% {
+    box-shadow: 0 0 0 0 rgba(245, 180, 0, 0);
+  }
+  45% {
+    box-shadow: 0 0 0 12px rgba(245, 180, 0, 0.28);
+  }
+  100% {
+    box-shadow: 0 0 0 20px rgba(245, 180, 0, 0);
+  }
+}
+
+@keyframes ft-pulse {
+  0%, 100% { transform: scale(1); }
+  50%      { transform: scale(1.03); }
+}
+
+/* ---- Reduced motion -------------------------------------------------------
+   Purely decorative motion is removed outright rather than shortened, since
+   it carries no information a user would miss. */
+@media (prefers-reduced-motion: reduce) {
+  .ft-skeleton {
+    animation: none !important;
+  }
+
+  .ft-success-burst__ray {
+    display: none !important;
+  }
+
+  .ft-pulse {
+    animation: none !important;
+  }
+
+  /* The unlock halo is celebration, not information — the badge, the name
+     and the copy all still say what happened. */
+  .ft-badge-medal--celebrate {
+    animation: none !important;
+  }
+}

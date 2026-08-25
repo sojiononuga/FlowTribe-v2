@@ -1,0 +1,341 @@
+/* ==========================================================================
+   Flow Tribe — Design Tokens
+   --------------------------------------------------------------------------
+   The single source of truth for every visual value in the application.
+   Nothing outside this file may declare a raw colour, shadow, radius,
+   duration, or font stack. Components consume these variables only.
+
+   Naming: --ft-<category>-<name>
+   Scales run 50 (lightest) to 900 (darkest), matching common design-system
+   convention so a designer can read them without a legend.
+   ========================================================================== */
+
+:root {
+  /* ---- Brand: burgundy -------------------------------------------------
+     600 is Deep Burgundy (#5B0000), the approved primary from the Flow
+     Tribe Design System. The scale is built around it so we can tint and
+     shade without inventing values ad hoc, which is how v1 ended up with
+     three different pinks.
+
+     #5B0000 has zero green and zero blue, so a naive tint toward white
+     drifts orange. These steps are hand-tuned to stay on the burgundy
+     hue: red always leads, green and blue track each other. */
+  --ft-burgundy-50:  #fceded;
+  --ft-burgundy-100: #f6d5d5;
+  --ft-burgundy-200: #e8a0a0;
+  --ft-burgundy-300: #ce5c5c;
+  --ft-burgundy-400: #a82121;
+  --ft-burgundy-500: #7d0b0b;
+  --ft-burgundy-600: #5b0000;  /* brand — Deep Burgundy */
+  --ft-burgundy-700: #4a0000;
+  --ft-burgundy-800: #3a0000;
+  --ft-burgundy-900: #260000;
+
+  /* ---- Brand: gold -----------------------------------------------------
+     400 is Golden Yellow (#F5B400), the approved accent. Gold is an accent,
+     never a surface: it marks progress and achievement so those moments
+     stay special.
+
+     ⚠️ #F5B400 on white is roughly 1.8:1 — far below the 4.5:1 AA needs for
+     normal text. Use 400 for fills, borders, icons, and large numerals.
+     For gold TEXT on a light background use 700, which clears AA at 5.5:1. */
+  --ft-gold-50:  #fef7e6;
+  --ft-gold-100: #fdedc2;
+  --ft-gold-200: #fbdc8a;
+  --ft-gold-300: #f8c845;
+  --ft-gold-400: #f5b400;  /* brand — Golden Yellow */
+  --ft-gold-500: #d19700;
+  --ft-gold-600: #a67a00;
+  --ft-gold-700: #8a6200;  /* AA-safe gold for text */
+  --ft-gold-800: #654800;
+  --ft-gold-900: #422f00;
+
+  /* ---- Neutrals --------------------------------------------------------
+     True greys, per the Design System: Background #F8F8F8, Border #E5E5E5,
+     Text #222222, Disabled #BDBDBD. These replace the warm-tinted neutrals
+     used through Phase 7.
+
+     500 and 600 are set by contrast rather than by even spacing: muted text
+     must still clear AA on the #F8F8F8 page background. */
+  --ft-neutral-0:   #ffffff;
+  --ft-neutral-25:  #fcfcfc;
+  --ft-neutral-50:  #f8f8f8;  /* Design System — Background */
+  --ft-neutral-100: #f1f1f1;
+  --ft-neutral-200: #e5e5e5;  /* Design System — Border */
+  --ft-neutral-300: #d4d4d4;
+  --ft-neutral-400: #bdbdbd;  /* Design System — Disabled */
+  --ft-neutral-500: #6e6e6e;  /* muted text — 4.8:1 on the page background */
+  --ft-neutral-600: #545454;  /* secondary text — 7.1:1 */
+  --ft-neutral-700: #3d3d3d;
+  --ft-neutral-800: #2e2e2e;
+  --ft-neutral-900: #222222;  /* Design System — Text */
+
+  /* ---- Status ----------------------------------------------------------
+     The approved Design System hues, split by job — see
+     docs/FINAL_PRODUCT_DECISIONS.md §6.3.
+
+       -50   soft tint, for badge and banner backgrounds
+       -500  THE APPROVED HEX. Fills, borders, icons, indicators, rings
+       -700  darker companion, for TEXT on a light background
+
+     #22C55E is 2.3:1 on white and #F59E0B is 2.2:1 — both far below AA for
+     normal text. The palette is preserved exactly where it is seen as
+     colour; text moves to -700, which clears AA. Never set -500 as a
+     `color` on a light surface. */
+  --ft-success-50:  #e8f8ee;
+  --ft-success-500: #22c55e;  /* Design System — Success */
+  --ft-success-700: #15803d;  /* AA text companion — 5.0:1 on white */
+  --ft-warning-50:  #fef3e2;
+  --ft-warning-500: #f59e0b;  /* Design System — Warning */
+  --ft-warning-700: #8a5a00;  /* AA text companion — 5.9:1 on white */
+  --ft-danger-50:   #fdeaea;
+  --ft-danger-500:  #dc2626;  /* Design System — Error */
+  --ft-danger-700:  #b91c1c;  /* AA text companion — 6.5:1 on white */
+  --ft-info-50:     #eaf1f9;
+  --ft-info-500:    #2b6cb0;
+  --ft-info-700:    #1f5185;
+
+  /* ---- Semantic surfaces ----------------------------------------------
+     Components reference these, never the raw scales above. Swapping a
+     theme means overriding this block alone. */
+  --ft-bg-page:        var(--ft-neutral-50);
+  --ft-bg-surface:     var(--ft-neutral-0);
+  --ft-bg-raised:      var(--ft-neutral-0);
+  --ft-bg-sunken:      var(--ft-neutral-100);
+  --ft-bg-brand-soft:  var(--ft-burgundy-50);
+  --ft-bg-brand:       var(--ft-burgundy-600);
+  --ft-bg-overlay:     rgba(34, 34, 34, 0.55);
+
+  --ft-text-primary:   var(--ft-neutral-900);
+  --ft-text-secondary: var(--ft-neutral-600);
+  --ft-text-muted:     var(--ft-neutral-500);
+  --ft-text-inverse:   var(--ft-neutral-0);
+  --ft-text-brand:     var(--ft-burgundy-600);
+  /* Gold 400 fails AA as text. Accent TEXT uses 700; gold as a fill or
+     numeral keeps --ft-gold-400. */
+  --ft-text-accent:    var(--ft-gold-700);
+
+  --ft-border-subtle:  var(--ft-neutral-200);
+  --ft-border-default: var(--ft-neutral-300);
+  --ft-border-strong:  var(--ft-neutral-400);
+  --ft-border-brand:   var(--ft-burgundy-600);
+
+  /* ---- Typography ------------------------------------------------------
+     Satoshi for headings, cards, statistics and buttons. Inter for body,
+     forms, tables, labels, navigation and admin. Both self-hosted — see
+     styles/fonts.css.
+
+     The system stack stays as the fallback on every variable, so a failed
+     or blocked font request degrades to something native rather than to
+     nothing. --ft-font-brand is the logo lockup, which the Design System
+     puts on Satoshi alongside the headings.
+
+     ⚠️ INTER SITS SECOND IN --ft-font-display ON PURPOSE. Satoshi has no
+     ẹ ọ Ẹ Ọ ṣ — the Yoruba subdot letters — and headings render member
+     names. Without Inter in second place those glyphs fall through to a
+     system serif and break mid-name. With it, the browser substitutes
+     per-glyph from a face that is already loaded and looks closely
+     related. Verified by measurement, not assumed. Do not reorder. */
+  --ft-font-sans:
+    'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto,
+    'Helvetica Neue', Arial, 'Noto Sans', sans-serif;
+  --ft-font-display: 'Satoshi', 'Inter', -apple-system, BlinkMacSystemFont,
+    'Segoe UI', Roboto, sans-serif;
+  --ft-font-brand:   var(--ft-font-display);
+  --ft-font-mono:
+    ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, monospace;
+
+  /* Type scale — the Design System's eight sizes, plus two the document
+     does not enumerate but real components need:
+
+       Caption 12 · Small 14 · Body 16 · Subheading 18 · Card 22 ·
+       Section 28 · Page 36 · Hero 48
+
+     2xs (11px) survives for the bottom-nav labels, where 12px wraps at
+     375px. 5xl (52px) survives for the progress-ring numeral, which sits
+     above the Hero size by design — it is the largest thing on the
+     dashboard and the one number a member looks for first. */
+  --ft-text-2xs: 0.6875rem; /* 11px — nav labels only */
+  --ft-text-xs:  0.75rem;   /* 12px — Caption */
+  --ft-text-sm:  0.875rem;  /* 14px — Small */
+  --ft-text-md:  1rem;      /* 16px — Body; also the iOS no-zoom threshold */
+  --ft-text-lg:  1.125rem;  /* 18px — Subheading */
+  --ft-text-xl:  1.375rem;  /* 22px — Card title */
+  --ft-text-2xl: 1.75rem;   /* 28px — Section title */
+  --ft-text-3xl: 2.25rem;   /* 36px — Page title */
+  --ft-text-4xl: 3rem;      /* 48px — Hero */
+  --ft-text-5xl: 3.25rem;   /* 52px — the progress-ring number */
+
+  --ft-weight-regular:  400;
+  --ft-weight-medium:   500;
+  --ft-weight-semibold: 600;
+  --ft-weight-bold:     700;
+  /* Satoshi ships Medium 500 and Bold 700 only — the two weights the Design
+     System declares. Asking for 800 makes the browser synthesise a heavier
+     face from 700, which smears at the large numeral sizes where it was
+     being used. Nothing sets this now; it is kept because Inter is variable
+     and genuinely has an 800. */
+  --ft-weight-extra:    800;
+
+  --ft-leading-tight:   1.15;
+  --ft-leading-snug:    1.3;
+  --ft-leading-normal:  1.5;
+  --ft-leading-relaxed: 1.65;
+
+  --ft-tracking-tight:  -0.02em;
+  --ft-tracking-normal: 0;
+  --ft-tracking-wide:   0.04em;
+  --ft-tracking-widest: 0.14em;
+
+  /* ---- Spacing — 4px base ---------------------------------------------
+     Every margin, padding, and gap comes from here. A consistent rhythm is
+     most of what separates "designed" from "assembled". */
+  --ft-space-0:  0;
+  --ft-space-1:  0.25rem;  /*  4px */
+  --ft-space-2:  0.5rem;   /*  8px */
+  --ft-space-3:  0.75rem;  /* 12px */
+  --ft-space-4:  1rem;     /* 16px */
+  --ft-space-5:  1.25rem;  /* 20px */
+  --ft-space-6:  1.5rem;   /* 24px */
+  --ft-space-8:  2rem;     /* 32px */
+  --ft-space-10: 2.5rem;   /* 40px */
+  --ft-space-12: 3rem;     /* 48px */
+  --ft-space-16: 4rem;     /* 64px */
+  --ft-space-20: 5rem;     /* 80px */
+
+  /* ---- Radius ----------------------------------------------------------
+     Generous. Rounded cards are a large part of why Duolingo and Notion
+     feel approachable rather than administrative.
+
+     The Design System names five: buttons and inputs 12px (md), cards
+     20px (xl), modals 24px (2xl), badges pill (full), avatars 50%
+     (handled per-component, since a percentage is not a length). xs, sm
+     and lg remain for the smaller interior surfaces the document does
+     not enumerate. */
+  --ft-radius-xs:   0.375rem; /*  6px */
+  --ft-radius-sm:   0.5rem;   /*  8px */
+  --ft-radius-md:   0.75rem;  /* 12px — buttons, inputs */
+  --ft-radius-lg:   1rem;     /* 16px */
+  --ft-radius-xl:   1.25rem;  /* 20px — cards */
+  --ft-radius-2xl:  1.5rem;   /* 24px — modals */
+  --ft-radius-full: 9999px;   /* badges */
+
+  /* ---- Elevation -------------------------------------------------------
+     Burgundy-tinted rather than black. A neutral drop shadow on a warm
+     palette looks like dirt; a tinted one looks intentional.
+
+     The Design System names three levels — cards, hover, modals. They map
+     onto sm, md, and lg. xs and xl remain for the hairline and the
+     full-screen cases the document does not enumerate. All soft, never
+     harsh. */
+  --ft-shadow-xs: 0 1px 2px rgba(91, 0, 0, 0.05);
+  --ft-shadow-sm: 0 2px 8px rgba(91, 0, 0, 0.07);   /* Level 1 — cards */
+  --ft-shadow-md: 0 6px 20px rgba(91, 0, 0, 0.10);  /* Level 2 — hover */
+  --ft-shadow-lg: 0 14px 40px rgba(91, 0, 0, 0.12); /* Level 3 — modals */
+  --ft-shadow-xl: 0 24px 64px rgba(91, 0, 0, 0.16); /* reserved — unused */
+  --ft-shadow-focus: 0 0 0 3px rgba(91, 0, 0, 0.18);
+  --ft-shadow-focus-danger: 0 0 0 3px rgba(220, 38, 38, 0.20);
+
+  /* ---- Motion ----------------------------------------------------------
+     Three durations, two curves. More options than this and consistency
+     quietly disappears. --ft-ease-spring is the slight overshoot used for
+     celebratory moments only. */
+  --ft-duration-fast: 150ms;
+  --ft-duration-base: 220ms;
+  --ft-duration-slow: 400ms;
+  --ft-duration-celebrate: 700ms;
+  --ft-ease-standard: cubic-bezier(0.4, 0, 0.2, 1);
+  --ft-ease-out:      cubic-bezier(0.16, 1, 0.3, 1);
+  --ft-ease-spring:   cubic-bezier(0.34, 1.56, 0.64, 1);
+
+  /* ---- Layering --------------------------------------------------------
+     Named steps stop the z-index: 99999 arms race. */
+  --ft-z-base:     0;
+  --ft-z-raised:   10;
+  --ft-z-sticky:   200;
+  --ft-z-overlay:  300;
+  --ft-z-modal:    400;
+  --ft-z-toast:    500;
+
+  /* ---- Layout ----------------------------------------------------------
+     --ft-container-md is the member app's reading width: the dashboard is
+     a focused, single-column surface even on a large screen. Admin uses
+     the wider container because tables need the room. */
+  --ft-container-sm: 26rem;  /* 416px — auth cards */
+  --ft-container-md: 34rem;  /* 544px — member screens */
+  --ft-container-lg: 64rem;  /* 1024px */
+  --ft-container-xl: 80rem;  /* 1280px — admin */
+
+  --ft-tap-target: 2.75rem;  /* 44px — the minimum comfortable touch size */
+  --ft-header-height: 3.5rem;
+  --ft-bottom-nav-height: 4rem;
+  --ft-sidebar-width: 15rem;  /* 240px — desktop left navigation */
+
+  /* ---- Icon sizing -----------------------------------------------------
+     The Design System sizes icons by context rather than by component, so
+     the same glyph is the same size everywhere it does the same job.
+     Before these existed the codebase carried a dozen one-off values —
+     1.125rem here, 0.9rem there — which is how an icon set stops looking
+     like a set. */
+  --ft-icon-nav:     1.5rem;   /* 24px — navigation */
+  --ft-icon-button:  1.25rem;  /* 20px — inside buttons */
+  --ft-icon-card:    1.5rem;   /* 24px — cards and list rows */
+  --ft-icon-stat:    1.75rem;  /* 28px — statistics */
+  --ft-icon-empty:   4rem;     /* 64px — empty states */
+  --ft-icon-feature: 5rem;     /* 80px — feature highlights */
+  --ft-icon-inline:  1rem;     /* 16px — trailing hints inside dense text */
+
+  /* Icon state colours. Default and active are the Design System's; the
+     status three reuse the -700 text companions so an icon beside a label
+     matches it. Disabled is the specified #BDBDBD (neutral-400). */
+  --ft-icon-default:  var(--ft-text-primary);
+  --ft-icon-active:   var(--ft-burgundy-600);
+  --ft-icon-success:  var(--ft-success-700);
+  --ft-icon-warning:  var(--ft-warning-700);
+  --ft-icon-error:    var(--ft-danger-700);
+  --ft-icon-disabled: var(--ft-neutral-400);
+}
+
+/* Breakpoints cannot be CSS variables in media queries, so they are recorded
+   here for reference and used as literals throughout. Mobile-first: every
+   rule targets small screens, and min-width queries add from there.
+
+     sm  480px   large phone
+     md  768px   tablet
+     lg 1024px   laptop
+     xl 1280px   desktop                                                    */
+
+/* ---- Reduced motion -------------------------------------------------------
+   Collapse durations rather than removing transitions entirely: state changes
+   stay legible, but nothing moves for someone who asked it not to. */
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --ft-duration-fast: 1ms;
+    --ft-duration-base: 1ms;
+    --ft-duration-slow: 1ms;
+    --ft-duration-celebrate: 1ms;
+  }
+}
+
+/* ---- Dark theme -----------------------------------------------------------
+   The spec calls for a white background, so light is the only theme shipped.
+   This block exists to prove the token layer supports a theme swap without
+   touching a component: override the semantic surfaces, nothing else.
+   Activated by data-theme="dark" on <html>. Not currently reachable in the UI. */
+:root[data-theme='dark'] {
+  --ft-bg-page:       var(--ft-neutral-900);
+  --ft-bg-surface:    var(--ft-neutral-800);
+  --ft-bg-raised:     var(--ft-neutral-700);
+  --ft-bg-sunken:     #141414;
+  --ft-bg-brand-soft: rgba(91, 0, 0, 0.35);
+  --ft-bg-overlay:    rgba(0, 0, 0, 0.7);
+
+  --ft-text-primary:   var(--ft-neutral-50);
+  --ft-text-secondary: var(--ft-neutral-300);
+  --ft-text-muted:     var(--ft-neutral-400);
+  --ft-text-brand:     var(--ft-burgundy-300);
+
+  --ft-border-subtle:  var(--ft-neutral-700);
+  --ft-border-default: var(--ft-neutral-600);
+  --ft-border-strong:  var(--ft-neutral-500);
+}

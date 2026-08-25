@@ -1,0 +1,671 @@
+/* ==========================================================================
+   Flow Tribe — Screen layouts
+   --------------------------------------------------------------------------
+   Layout for the member screens. Component styling lives with its component;
+   this is arrangement only.
+   ========================================================================== */
+
+/* ==========================================================================
+   Auth screens
+   ========================================================================== */
+
+.ft-auth {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  padding-block: var(--ft-space-6) var(--ft-space-10);
+}
+
+.ft-auth__brand {
+  display: flex;
+  justify-content: center;
+  margin-bottom: var(--ft-space-6);
+}
+
+.ft-auth__title {
+  font-size: var(--ft-text-2xl);
+  text-align: center;
+  letter-spacing: var(--ft-tracking-tight);
+}
+
+.ft-auth__subtitle {
+  margin-top: var(--ft-space-2);
+  text-align: center;
+  color: var(--ft-text-secondary);
+  font-size: var(--ft-text-sm);
+  line-height: var(--ft-leading-relaxed);
+}
+
+.ft-auth__form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ft-space-5);
+  margin-top: var(--ft-space-8);
+}
+
+.ft-auth__error {
+  padding: var(--ft-space-3) var(--ft-space-4);
+  background-color: var(--ft-danger-50);
+  color: var(--ft-danger-700);
+  border-radius: var(--ft-radius-md);
+  font-size: var(--ft-text-sm);
+  text-align: center;
+  animation: ft-rise-in var(--ft-duration-base) var(--ft-ease-out);
+}
+
+.ft-auth__actions {
+  display: flex;
+  gap: var(--ft-space-3);
+  margin-top: var(--ft-space-8);
+}
+
+.ft-auth__actions .ft-btn--ghost { flex: 0 0 auto; }
+
+.ft-auth__foot {
+  margin-top: var(--ft-space-8);
+  text-align: center;
+}
+
+/* Prototype-only note. Removed when the real backend lands. */
+.ft-auth__hint {
+  margin-top: var(--ft-space-8);
+  padding: var(--ft-space-2) var(--ft-space-3);
+  background-color: var(--ft-bg-sunken);
+  border-radius: var(--ft-radius-sm);
+  font-size: var(--ft-text-2xs);
+  color: var(--ft-text-muted);
+  text-align: center;
+}
+
+/* ---- Step indicator ---- */
+
+.ft-steps {
+  display: flex;
+  gap: var(--ft-space-2);
+  margin-top: var(--ft-space-6);
+}
+
+.ft-steps__item {
+  flex: 1;
+  padding-top: var(--ft-space-2);
+  border-top: 3px solid var(--ft-neutral-200);
+  font-size: var(--ft-text-2xs);
+  color: var(--ft-text-muted);
+  transition:
+    border-color var(--ft-duration-base) var(--ft-ease-standard),
+    color var(--ft-duration-base) var(--ft-ease-standard);
+}
+
+.ft-steps__item--done {
+  border-top-color: var(--ft-burgundy-300);
+  color: var(--ft-text-secondary);
+}
+
+.ft-steps__item--current {
+  border-top-color: var(--ft-burgundy-600);
+  color: var(--ft-burgundy-700);
+  font-weight: var(--ft-weight-semibold);
+}
+
+.ft-consent {
+  padding: var(--ft-space-4);
+  background-color: var(--ft-bg-sunken);
+  border-radius: var(--ft-radius-lg);
+}
+
+.ft-steps-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ft-space-3);
+  counter-reset: step;
+}
+
+.ft-steps-list li {
+  display: flex;
+  gap: var(--ft-space-3);
+  font-size: var(--ft-text-sm);
+  line-height: var(--ft-leading-relaxed);
+  counter-increment: step;
+}
+
+.ft-steps-list li::before {
+  content: counter(step);
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.5rem;
+  height: 1.5rem;
+  background-color: var(--ft-burgundy-50);
+  color: var(--ft-burgundy-700);
+  border-radius: var(--ft-radius-full);
+  font-size: var(--ft-text-xs);
+  font-weight: var(--ft-weight-bold);
+}
+
+/* ---- Welcome ---- */
+
+.ft-welcome-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ft-space-4);
+}
+
+.ft-welcome-list__item {
+  display: flex;
+  align-items: center;
+  gap: var(--ft-space-3);
+}
+
+.ft-welcome-list__icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 2.25rem;
+  height: 2.25rem;
+  background-color: var(--ft-bg-sunken);
+  border-radius: var(--ft-radius-md);
+  color: var(--ft-burgundy-600);
+}
+
+.ft-welcome-list__icon svg { width: 1.1rem; height: 1.1rem; }
+
+.ft-welcome-list__body { display: flex; flex-direction: column; }
+
+.ft-welcome-list__label {
+  font-size: var(--ft-text-xs);
+  color: var(--ft-text-muted);
+}
+
+.ft-welcome-list__value {
+  font-weight: var(--ft-weight-semibold);
+}
+
+/* ==========================================================================
+   Dashboard
+   ========================================================================== */
+
+.ft-dashboard { padding-block: var(--ft-space-4) var(--ft-space-6); }
+
+.ft-welcome__title {
+  font-size: var(--ft-text-2xl);
+  letter-spacing: var(--ft-tracking-tight);
+}
+
+.ft-welcome__meta {
+  display: flex;
+  align-items: center;
+  gap: var(--ft-space-2);
+  flex-wrap: wrap;
+  margin-top: var(--ft-space-2);
+}
+
+.ft-welcome__platform {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--ft-space-2);
+  font-size: var(--ft-text-sm);
+  color: var(--ft-text-secondary);
+}
+
+.ft-welcome__platform-icon { width: 1rem; height: 1rem; }
+
+@media (min-width: 768px) {
+  .ft-welcome__title { font-size: var(--ft-text-3xl); }
+}
+
+/* ---- Weekly ring panel ---- */
+
+.ft-week-panel {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--ft-space-4);
+  text-align: center;
+}
+
+.ft-week-panel__message {
+  font-size: var(--ft-text-md);
+  color: var(--ft-text-secondary);
+  max-width: 22rem;
+  line-height: var(--ft-leading-relaxed);
+}
+
+.ft-week-panel__message--met {
+  color: var(--ft-success-700);
+  font-weight: var(--ft-weight-semibold);
+}
+
+/* ---- Recently unlocked ---- */
+
+.ft-milestone-recent {
+  display: flex;
+  gap: var(--ft-space-2);
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  padding-bottom: var(--ft-space-1);
+}
+
+.ft-milestone-recent__item {
+  display: flex;
+  align-items: center;
+  gap: var(--ft-space-2);
+  flex-shrink: 0;
+  padding: var(--ft-space-2) var(--ft-space-3) var(--ft-space-2) var(--ft-space-2);
+  background-color: var(--ft-bg-surface);
+  border: 1px solid var(--ft-border-subtle);
+  border-radius: var(--ft-radius-full);
+  cursor: pointer;
+  transition: border-color var(--ft-duration-fast) var(--ft-ease-standard);
+}
+
+.ft-milestone-recent__item:hover { border-color: var(--ft-burgundy-300); }
+
+.ft-milestone-recent__name {
+  font-size: var(--ft-text-xs);
+  font-weight: var(--ft-weight-semibold);
+  white-space: nowrap;
+}
+
+/* ---- Bottom CTA ---- */
+
+.ft-dashboard__cta {
+  position: sticky;
+  bottom: var(--ft-space-4);
+  margin-top: var(--ft-space-4);
+}
+
+@media (min-width: 1024px) {
+  .ft-dashboard__cta { position: static; }
+}
+
+/* ==========================================================================
+   Leaderboard
+   ========================================================================== */
+
+.ft-leaderboard { display: flex; flex-direction: column; }
+
+.ft-leaderboard__row {
+  display: flex;
+  align-items: center;
+  gap: var(--ft-space-3);
+  padding: var(--ft-space-3) var(--ft-space-4);
+  border-bottom: 1px solid var(--ft-border-subtle);
+}
+
+.ft-leaderboard__row:last-child { border-bottom: none; }
+
+/* The member's own row is tinted, so they can find themselves without
+   reading — the leaderboard should answer "where am I?" at a glance. */
+.ft-leaderboard__row--self {
+  background-color: var(--ft-burgundy-50);
+}
+
+.ft-leaderboard__rank {
+  flex-shrink: 0;
+  width: 1.75rem;
+  font-family: var(--ft-font-display);
+  font-weight: var(--ft-weight-bold);
+  font-variant-numeric: tabular-nums;
+  font-size: var(--ft-text-md);
+  color: var(--ft-text-muted);
+  text-align: center;
+}
+
+.ft-leaderboard__rank--podium { color: var(--ft-gold-500); }
+
+.ft-leaderboard__name {
+  display: flex;
+  align-items: center;
+  gap: var(--ft-space-2);
+  flex: 1;
+  min-width: 0;
+  font-size: var(--ft-text-sm);
+  font-weight: var(--ft-weight-medium);
+}
+
+.ft-leaderboard__count {
+  display: flex;
+  align-items: baseline;
+  gap: var(--ft-space-1);
+  flex-shrink: 0;
+  font-size: var(--ft-text-md);
+}
+
+.ft-leaderboard__goal {
+  font-size: var(--ft-text-xs);
+  color: var(--ft-text-muted);
+}
+
+.ft-leaderboard__met {
+  width: 0.9rem;
+  height: 0.9rem;
+  color: var(--ft-success-700);
+  align-self: center;
+}
+
+.ft-leaderboard--full .ft-leaderboard__row { padding-block: var(--ft-space-4); }
+
+/* ---- Tabs ---- */
+
+.ft-tabs {
+  display: flex;
+  gap: var(--ft-space-1);
+  padding: var(--ft-space-1);
+  margin-bottom: var(--ft-space-4);
+  background-color: var(--ft-bg-sunken);
+  border-radius: var(--ft-radius-full);
+}
+
+.ft-tab {
+  flex: 1;
+  /* Comfortable to hit with a thumb — tabs are the most-tapped control on
+     this screen and were the one place falling below the target size. */
+  min-height: 2.5rem;
+  padding: var(--ft-space-2) var(--ft-space-3);
+  border-radius: var(--ft-radius-full);
+  font-size: var(--ft-text-sm);
+  font-weight: var(--ft-weight-medium);
+  color: var(--ft-text-secondary);
+  transition:
+    background-color var(--ft-duration-fast) var(--ft-ease-standard),
+    color var(--ft-duration-fast) var(--ft-ease-standard);
+}
+
+.ft-tab:hover { color: var(--ft-text-primary); }
+
+.ft-tab--active {
+  background-color: var(--ft-bg-surface);
+  color: var(--ft-burgundy-700);
+  font-weight: var(--ft-weight-semibold);
+  box-shadow: var(--ft-shadow-xs);
+}
+
+/* ==========================================================================
+   Recent activity
+   ========================================================================== */
+
+.ft-recent { display: flex; flex-direction: column; gap: var(--ft-space-2); }
+
+.ft-recent__item {
+  display: flex;
+  align-items: center;
+  gap: var(--ft-space-3);
+  padding: var(--ft-space-3);
+  background-color: var(--ft-bg-surface);
+  border: 1px solid var(--ft-border-subtle);
+  border-radius: var(--ft-radius-md);
+}
+
+.ft-recent__icon {
+  display: flex;
+  flex-shrink: 0;
+  width: var(--ft-icon-card);
+  height: var(--ft-icon-card);
+}
+
+.ft-recent__body { display: flex; flex-direction: column; min-width: 0; flex: 1; }
+
+.ft-recent__link {
+  font-size: var(--ft-text-sm);
+  font-weight: var(--ft-weight-medium);
+}
+
+.ft-recent__time {
+  font-size: var(--ft-text-xs);
+  color: var(--ft-text-muted);
+}
+
+/* ==========================================================================
+   Submit
+   ========================================================================== */
+
+.ft-submit { padding-block: var(--ft-space-4) var(--ft-space-8); }
+
+.ft-submit-success {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: var(--ft-space-3);
+  padding-block: var(--ft-space-8) var(--ft-space-4);
+  animation: ft-rise-in var(--ft-duration-base) var(--ft-ease-out);
+}
+
+.ft-submit-success__burst { margin-bottom: var(--ft-space-2); }
+
+.ft-submit-success__title {
+  font-size: var(--ft-text-3xl);
+  color: var(--ft-burgundy-700);
+}
+
+.ft-submit-success__message {
+  color: var(--ft-text-secondary);
+  margin-bottom: var(--ft-space-4);
+}
+
+.ft-submit-success > .ft-card { width: 100%; }
+
+/* ==========================================================================
+   Milestones
+   ========================================================================== */
+
+.ft-milestone-summary {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--ft-space-3);
+}
+
+.ft-milestone-summary__item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--ft-space-1);
+  padding: var(--ft-space-4) var(--ft-space-2);
+  background-color: var(--ft-bg-surface);
+  border: 1px solid var(--ft-border-subtle);
+  border-radius: var(--ft-radius-lg);
+}
+
+.ft-milestone-summary__value {
+  font-size: var(--ft-text-2xl);
+  color: var(--ft-burgundy-600);
+}
+
+.ft-milestone-summary__label {
+  font-size: var(--ft-text-xs);
+  color: var(--ft-text-muted);
+}
+
+/* ---- Detail modal ---- */
+
+.ft-milestone-detail {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: var(--ft-space-4);
+}
+
+.ft-milestone-detail__description {
+  color: var(--ft-text-secondary);
+  line-height: var(--ft-leading-relaxed);
+}
+
+.ft-milestone-detail__meta {
+  display: flex;
+  gap: var(--ft-space-2);
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.ft-milestone-detail__progress { width: 100%; }
+
+/* ---- Celebration ---- */
+
+.ft-celebration {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: var(--ft-space-2);
+  padding-top: var(--ft-space-2);
+}
+
+/* The burst plays behind the medal, so the medal is what the eye settles on
+   once the motion finishes. */
+.ft-celebration__burst {
+  position: absolute;
+  top: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  opacity: 0.55;
+  pointer-events: none;
+}
+
+.ft-celebration__medal {
+  position: relative;
+  z-index: 1;
+  margin-bottom: var(--ft-space-2);
+  animation: ft-pop-in var(--ft-duration-celebrate) var(--ft-ease-spring) both;
+}
+
+.ft-celebration__eyebrow {
+  font-size: var(--ft-text-2xs);
+  font-weight: var(--ft-weight-semibold);
+  letter-spacing: var(--ft-tracking-widest);
+  text-transform: uppercase;
+  color: var(--ft-gold-600);
+}
+
+.ft-celebration__name {
+  font-size: var(--ft-text-xl);
+  font-weight: var(--ft-weight-bold);
+}
+
+.ft-celebration__description {
+  color: var(--ft-text-secondary);
+  font-size: var(--ft-text-sm);
+  line-height: var(--ft-leading-relaxed);
+  max-width: 22rem;
+}
+
+/* ==========================================================================
+   Flow Levels
+   ========================================================================== */
+
+.ft-level-hero {
+  display: flex;
+  align-items: center;
+  gap: var(--ft-space-4);
+}
+
+.ft-level-hero__icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 3.5rem;
+  height: 3.5rem;
+  background-color: rgba(255, 255, 255, 0.15);
+  border-radius: var(--ft-radius-full);
+  color: var(--ft-gold-300);
+}
+
+.ft-level-hero__icon svg { width: 1.6rem; height: 1.6rem; }
+
+.ft-level-hero__eyebrow {
+  font-size: var(--ft-text-2xs);
+  letter-spacing: var(--ft-tracking-widest);
+  text-transform: uppercase;
+  opacity: 0.75;
+}
+
+.ft-level-hero__name {
+  font-size: var(--ft-text-xl);
+  color: var(--ft-neutral-0);
+  margin-block: 2px;
+}
+
+.ft-level-hero__description {
+  font-size: var(--ft-text-sm);
+  opacity: 0.85;
+  line-height: var(--ft-leading-snug);
+}
+
+/* ==========================================================================
+   Profile
+   ========================================================================== */
+
+.ft-profile-head {
+  display: flex;
+  align-items: center;
+  gap: var(--ft-space-4);
+  padding-bottom: var(--ft-space-5);
+  border-bottom: 1px solid var(--ft-border-subtle);
+}
+
+.ft-profile-head__body { display: flex; flex-direction: column; gap: var(--ft-space-1); min-width: 0; }
+
+.ft-profile-head__name {
+  font-size: var(--ft-text-xl);
+  letter-spacing: var(--ft-tracking-tight);
+}
+
+.ft-profile-head__username {
+  font-size: var(--ft-text-sm);
+  color: var(--ft-text-muted);
+}
+
+.ft-profile-head__chips { display: flex; gap: var(--ft-space-2); flex-wrap: wrap; margin-top: var(--ft-space-1); }
+
+.ft-profile-facts {
+  display: grid;
+  gap: var(--ft-space-4);
+  padding-top: var(--ft-space-5);
+}
+
+@media (min-width: 480px) {
+  .ft-profile-facts { grid-template-columns: repeat(3, 1fr); }
+}
+
+.ft-profile-facts__label {
+  display: flex;
+  align-items: center;
+  gap: var(--ft-space-2);
+  font-size: var(--ft-text-xs);
+  color: var(--ft-text-muted);
+  margin-bottom: 2px;
+}
+
+.ft-profile-facts__icon { display: flex; width: 0.9rem; height: 0.9rem; }
+
+.ft-profile-facts__value { font-weight: var(--ft-weight-semibold); }
+
+.ft-profile-medals {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(5.5rem, 1fr));
+  gap: var(--ft-space-3);
+}
+
+.ft-profile-medals__item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--ft-space-2);
+  padding: var(--ft-space-3) var(--ft-space-2);
+  border-radius: var(--ft-radius-md);
+  cursor: pointer;
+  transition: background-color var(--ft-duration-fast) var(--ft-ease-standard);
+}
+
+.ft-profile-medals__item:hover { background-color: var(--ft-bg-sunken); }
+
+.ft-profile-medals__name {
+  font-size: var(--ft-text-2xs);
+  color: var(--ft-text-secondary);
+  text-align: center;
+  line-height: var(--ft-leading-snug);
+}

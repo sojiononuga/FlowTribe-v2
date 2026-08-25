@@ -1,0 +1,432 @@
+/* ==========================================================================
+   Flow Tribe — Layout Components
+   --------------------------------------------------------------------------
+   Styles for src/components/layout/*. The app shell, top bar, bottom nav,
+   page header, and the admin ⇄ member mode switch.
+
+   Mobile-first throughout: bottom navigation on phones, a sidebar only once
+   there is room for one.
+   ========================================================================== */
+
+/* ==========================================================================
+   App shell
+   ========================================================================== */
+
+.ft-shell {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  min-height: 100dvh;
+  background-color: var(--ft-bg-page);
+}
+
+.ft-shell__main {
+  flex: 1 1 auto;
+  width: 100%;
+  /* Bottom padding clears the fixed nav plus the iOS home indicator. */
+  padding-bottom: calc(
+    var(--ft-bottom-nav-height) + var(--ft-space-6) + env(safe-area-inset-bottom, 0px)
+  );
+}
+
+.ft-shell--no-nav .ft-shell__main {
+  padding-bottom: var(--ft-space-8);
+}
+
+/* Page transition. The router replaces the outlet's child on every
+   navigation, so animating the direct child gives a fade on arrival at no
+   scripting cost — and on the first paint too, which is what the Design
+   System asks for on initial load.
+
+   A fade rather than a rise: a rise on a long screen drags content past the
+   fold and reads as jitter. Suppressed under prefers-reduced-motion by the
+   global duration collapse in tokens.css. */
+.ft-shell__main > * {
+  animation: ft-fade-in var(--ft-duration-base) var(--ft-ease-out);
+}
+
+/* Centred single-column layout used by login and registration. */
+.ft-shell--centered {
+  justify-content: center;
+  align-items: center;
+  padding: var(--ft-space-5) var(--ft-space-4);
+}
+
+.ft-shell--centered .ft-shell__main {
+  padding-bottom: 0;
+  max-width: var(--ft-container-sm);
+}
+
+@media (min-width: 1024px) {
+  .ft-shell__main {
+    padding-bottom: var(--ft-space-10);
+  }
+}
+
+/* ==========================================================================
+   Top bar
+   ========================================================================== */
+
+.ft-topbar {
+  position: sticky;
+  top: 0;
+  z-index: var(--ft-z-sticky);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--ft-space-3);
+  height: var(--ft-header-height);
+  padding-inline: var(--ft-space-4);
+  background-color: rgba(255, 255, 255, 0.85);
+  /* Translucent bar with a blur, so content scrolling underneath stays
+     faintly visible — the detail that makes an app feel layered rather
+     than like a stack of documents. */
+  backdrop-filter: saturate(180%) blur(12px);
+  -webkit-backdrop-filter: saturate(180%) blur(12px);
+  border-bottom: 1px solid var(--ft-border-subtle);
+}
+
+/* Fall back to an opaque bar where backdrop-filter is unsupported,
+   otherwise the text sits on whatever scrolls beneath it. */
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  .ft-topbar {
+    background-color: var(--ft-bg-surface);
+  }
+}
+
+.ft-topbar__start,
+.ft-topbar__end {
+  display: flex;
+  align-items: center;
+  gap: var(--ft-space-2);
+  min-width: 0;
+}
+
+.ft-topbar__title {
+  font-size: var(--ft-text-md);
+  font-weight: var(--ft-weight-bold);
+  letter-spacing: var(--ft-tracking-tight);
+}
+
+.ft-topbar__back {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--ft-tap-target);
+  height: var(--ft-tap-target);
+  margin-left: calc(var(--ft-space-3) * -1);
+  border-radius: var(--ft-radius-full);
+  color: var(--ft-text-secondary);
+  transition: background-color var(--ft-duration-fast) var(--ft-ease-standard);
+}
+
+.ft-topbar__back:hover {
+  background-color: var(--ft-neutral-100);
+}
+
+@media (min-width: 768px) {
+  .ft-topbar {
+    padding-inline: var(--ft-space-6);
+  }
+}
+
+/* ==========================================================================
+   Bottom navigation (mobile)
+   ========================================================================== */
+
+.ft-bottomnav {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: var(--ft-z-sticky);
+  display: flex;
+  align-items: stretch;
+  height: calc(var(--ft-bottom-nav-height) + env(safe-area-inset-bottom, 0px));
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+  background-color: var(--ft-bg-surface);
+  border-top: 1px solid var(--ft-border-subtle);
+}
+
+.ft-bottomnav__item {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  padding: var(--ft-space-2) var(--ft-space-1);
+  color: var(--ft-text-muted);
+  font-size: var(--ft-text-2xs);
+  font-weight: var(--ft-weight-medium);
+  transition: color var(--ft-duration-fast) var(--ft-ease-standard);
+}
+
+.ft-bottomnav__item:hover {
+  color: var(--ft-text-secondary);
+}
+
+.ft-bottomnav__item[aria-current='page'] {
+  color: var(--ft-burgundy-600);
+}
+
+.ft-bottomnav__icon {
+  width: var(--ft-icon-nav);
+  height: var(--ft-icon-nav);
+}
+
+/* The primary action sits in the nav as a raised circle — the single most
+   important thing a member does, always within thumb reach. */
+.ft-bottomnav__cta {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 3.25rem;
+  height: 3.25rem;
+  margin-top: -1.25rem;
+  background-color: var(--ft-burgundy-600);
+  color: var(--ft-text-inverse);
+  border: 4px solid var(--ft-bg-surface);
+  border-radius: var(--ft-radius-full);
+  box-shadow: var(--ft-shadow-md);
+  transition:
+    transform var(--ft-duration-fast) var(--ft-ease-spring),
+    background-color var(--ft-duration-fast) var(--ft-ease-standard);
+}
+
+.ft-bottomnav__cta:hover  { background-color: var(--ft-burgundy-700); }
+.ft-bottomnav__cta:active { transform: scale(0.94); }
+
+/* The CTA is a bare circle on mobile, so its label is hidden there and shown
+   again in the desktop sidebar. The span is always in the markup — see the
+   note in components/layout/index.js. */
+.ft-bottomnav__cta-label {
+  display: none;
+}
+
+/* ==========================================================================
+   Desktop — left sidebar
+   --------------------------------------------------------------------------
+   From 1024px the same navigation moves to a left sidebar, per the Design
+   System. Mobile keeps bottom navigation.
+
+   This is PRESENTATION ONLY. The routes, the guards, and the NAV_ITEMS list
+   are untouched — the identical <nav> is laid out differently. The shell
+   becomes a grid so the top bar can span the full width while the sidebar
+   and content sit side by side beneath it; without the grid the sidebar
+   could not be full-height without absolute positioning.
+
+   The :not() guards keep the auth screens out of it. Login and registration
+   render with no navigation at all, and a grid there would leave an empty
+   240px column beside a centred card.
+   ========================================================================== */
+
+@media (min-width: 1024px) {
+  .ft-shell:not(.ft-shell--centered):not(.ft-shell--no-nav) {
+    display: grid;
+    grid-template-columns: var(--ft-sidebar-width) minmax(0, 1fr);
+    grid-template-rows: auto minmax(0, 1fr);
+    grid-template-areas:
+      'topbar topbar'
+      'nav    main';
+  }
+
+  .ft-shell:not(.ft-shell--centered):not(.ft-shell--no-nav) > .ft-topbar {
+    grid-area: topbar;
+  }
+
+  .ft-shell:not(.ft-shell--centered):not(.ft-shell--no-nav) > .ft-bottomnav {
+    grid-area: nav;
+  }
+
+  .ft-shell:not(.ft-shell--centered):not(.ft-shell--no-nav) > .ft-shell__main {
+    grid-area: main;
+  }
+
+  .ft-bottomnav {
+    position: sticky;
+    /* The mobile rule pins all four edges. A sticky box uses every inset it
+       is given, so the other three have to be released or it never settles
+       against the top. */
+    top: var(--ft-header-height);
+    right: auto;
+    bottom: auto;
+    left: auto;
+    align-self: start;
+    /* Full remaining viewport height, scrolling independently, so a long nav
+       never pushes the page and never scrolls away from the content. */
+    height: calc(100dvh - var(--ft-header-height));
+    flex-direction: column;
+    align-items: stretch;
+    gap: 2px;
+    padding: var(--ft-space-4) var(--ft-space-3);
+    border-top: none;
+    border-right: 1px solid var(--ft-border-subtle);
+    overflow-y: auto;
+  }
+
+  .ft-bottomnav__item {
+    flex: 0 0 auto;
+    flex-direction: row;
+    justify-content: flex-start;
+    gap: var(--ft-space-3);
+    padding: var(--ft-space-3);
+    font-size: var(--ft-text-sm);
+    border-radius: var(--ft-radius-md);
+  }
+
+  .ft-bottomnav__item[aria-current='page'] {
+    background-color: var(--ft-burgundy-50);
+    color: var(--ft-burgundy-700);
+    font-weight: var(--ft-weight-semibold);
+  }
+
+  /* The primary action leads the sidebar rather than sitting mid-list, which
+     is where it lands in source order because the mobile layout wants it
+     centred. `order` moves it without touching the markup. */
+  .ft-bottomnav__cta {
+    order: -1;
+    width: 100%;
+    height: auto;
+    margin: 0 0 var(--ft-space-3);
+    justify-content: flex-start;
+    gap: var(--ft-space-3);
+    padding: var(--ft-space-3);
+    border: none;
+    border-radius: var(--ft-radius-md);
+    font-size: var(--ft-text-sm);
+    font-weight: var(--ft-weight-semibold);
+  }
+
+  .ft-bottomnav__cta:active {
+    transform: none;
+  }
+
+  .ft-bottomnav__cta-label {
+    display: inline;
+  }
+}
+
+/* ==========================================================================
+   Page header
+   ========================================================================== */
+
+.ft-pagehead {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ft-space-1);
+  padding: var(--ft-space-6) 0 var(--ft-space-4);
+}
+
+.ft-pagehead__eyebrow {
+  font-size: var(--ft-text-xs);
+  font-weight: var(--ft-weight-semibold);
+  letter-spacing: var(--ft-tracking-wide);
+  text-transform: uppercase;
+  color: var(--ft-text-muted);
+}
+
+.ft-pagehead__title {
+  font-size: var(--ft-text-2xl);
+  font-weight: var(--ft-weight-bold);
+  letter-spacing: var(--ft-tracking-tight);
+}
+
+.ft-pagehead__subtitle {
+  font-size: var(--ft-text-sm);
+  color: var(--ft-text-secondary);
+  line-height: var(--ft-leading-relaxed);
+}
+
+.ft-pagehead__actions {
+  display: flex;
+  gap: var(--ft-space-2);
+  margin-top: var(--ft-space-3);
+}
+
+@media (min-width: 768px) {
+  .ft-pagehead {
+    flex-direction: row;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: var(--ft-space-4);
+  }
+
+  .ft-pagehead__actions { margin-top: 0; }
+  .ft-pagehead__title   { font-size: var(--ft-text-3xl); }
+}
+
+/* ==========================================================================
+   Mode switch — My Dashboard ⇄ Admin
+   --------------------------------------------------------------------------
+   Community Managers and Super Admins are members too: they have their own
+   streaks and appear on the leaderboard. This is how they move between the
+   two shells.
+
+   Because the shells are separate documents on the same origin, this is a
+   real navigation rather than a client-side route. The session token in
+   localStorage carries across untouched.
+   ========================================================================== */
+
+.ft-modeswitch {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--ft-space-2);
+  padding: var(--ft-space-2) var(--ft-space-3);
+  background-color: var(--ft-burgundy-50);
+  color: var(--ft-burgundy-700);
+  border-radius: var(--ft-radius-full);
+  font-size: var(--ft-text-sm);
+  font-weight: var(--ft-weight-semibold);
+  white-space: nowrap;
+  transition: background-color var(--ft-duration-fast) var(--ft-ease-standard);
+}
+
+.ft-modeswitch:hover {
+  background-color: var(--ft-burgundy-100);
+  color: var(--ft-burgundy-800);
+}
+
+.ft-modeswitch__icon {
+  width: 1rem;
+  height: 1rem;
+  flex-shrink: 0;
+}
+
+/* The label is hidden on the smallest screens where the top bar is tight;
+   the icon plus the accessible name still convey the action. */
+.ft-modeswitch__label {
+  display: none;
+}
+
+@media (min-width: 480px) {
+  .ft-modeswitch__label { display: inline; }
+}
+
+/* ==========================================================================
+   Section — a titled block within a page
+   ========================================================================== */
+
+.ft-section {
+  margin-top: var(--ft-space-8);
+}
+
+.ft-section__header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--ft-space-3);
+  margin-bottom: var(--ft-space-3);
+}
+
+.ft-section__title {
+  font-size: var(--ft-text-md);
+  font-weight: var(--ft-weight-bold);
+  letter-spacing: var(--ft-tracking-tight);
+}
+
+.ft-section__action {
+  font-size: var(--ft-text-sm);
+  font-weight: var(--ft-weight-semibold);
+  color: var(--ft-text-brand);
+}

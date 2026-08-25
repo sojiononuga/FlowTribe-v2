@@ -1,0 +1,96 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+
+    <title>Flow Tribe · Component Gallery</title>
+    <meta name="robots" content="noindex, nofollow" />
+
+    <!--
+      Component gallery — a development tool, not part of the shipped app.
+
+      It renders every token and every component on one page so the design
+      system can be reviewed as a whole, and so a change to a shared component
+      is checked everywhere at once rather than discovered on one screen weeks
+      later.
+
+      Exclude this file when deploying, or leave it: it contains no data and
+      makes no authenticated requests.
+    -->
+    <link rel="stylesheet" href="styles/tokens.css" />
+    <link rel="stylesheet" href="styles/fonts.css" />
+    <link rel="stylesheet" href="styles/reset.css" />
+    <link rel="stylesheet" href="styles/base.css" />
+    <link rel="stylesheet" href="styles/animations.css" />
+    <link rel="stylesheet" href="styles/utilities.css" />
+    <link rel="stylesheet" href="styles/components-ui.css" />
+    <link rel="stylesheet" href="styles/components-brand.css" />
+    <link rel="stylesheet" href="styles/components-layout.css" />
+    <link rel="stylesheet" href="styles/components-calendar.css" />
+    <link rel="stylesheet" href="styles/components-views.css" />
+
+    <style>
+      /* Gallery chrome only — never loaded by the application. */
+      .gal-section {
+        padding: var(--ft-space-8) 0;
+        border-bottom: 1px solid var(--ft-border-subtle);
+      }
+      .gal-section:last-child { border-bottom: none; }
+      .gal-title {
+        font-size: var(--ft-text-xs);
+        font-weight: var(--ft-weight-bold);
+        letter-spacing: var(--ft-tracking-widest);
+        text-transform: uppercase;
+        color: var(--ft-text-muted);
+        margin-bottom: var(--ft-space-5);
+      }
+      .gal-row {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: var(--ft-space-3);
+        margin-bottom: var(--ft-space-4);
+      }
+      .gal-swatches {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(4.5rem, 1fr));
+        gap: var(--ft-space-2);
+      }
+      .gal-swatch {
+        border-radius: var(--ft-radius-md);
+        overflow: hidden;
+        border: 1px solid var(--ft-border-subtle);
+        font-size: var(--ft-text-2xs);
+      }
+      .gal-swatch__chip { height: 3rem; }
+      .gal-swatch__name {
+        padding: var(--ft-space-1) var(--ft-space-2);
+        color: var(--ft-text-muted);
+        background: var(--ft-bg-surface);
+      }
+      .gal-note {
+        font-size: var(--ft-text-xs);
+        color: var(--ft-text-muted);
+        margin-bottom: var(--ft-space-4);
+        line-height: var(--ft-leading-relaxed);
+      }
+      .gal-panel {
+        padding: var(--ft-space-5);
+        background: var(--ft-bg-sunken);
+        border-radius: var(--ft-radius-lg);
+      }
+    </style>
+
+    <link
+      rel="icon"
+      type="image/svg+xml"
+      href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%23F5B400'/%3E%3Ctext x='32' y='45' font-family='system-ui,sans-serif' font-size='34' font-weight='800' fill='%235B0000' text-anchor='middle'%3EG%3C/text%3E%3C/svg%3E"
+    />
+  </head>
+
+  <body>
+    <div id="gallery" class="ft-container ft-container--lg"></div>
+    <script type="module" src="src/gallery.js"></script>
+  </body>
+</html>

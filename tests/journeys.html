@@ -1,0 +1,120 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Flow Tribe · Journey Verification</title>
+    <meta name="robots" content="noindex, nofollow" />
+
+    <!--
+      End-to-end journey harness.
+
+      backend.html proves the BACKEND answers correctly. This page proves the
+      REAL VIEW MODULES render correctly against those answers.
+
+      That distinction is not academic. Phase 10 found two crashes that had
+      survived seven phases and a passing 101-check suite, because the
+      frontend-contract group asserted the shape of the response rather than
+      the paths the views actually read. It confirmed `milestones.totalEarned`
+      exists — it does — while the profile screen read `milestones.milestones`,
+      which never did.
+
+      Here there is no contract to keep in sync. The views are mounted and
+      driven; if one throws, or renders the word "undefined", a journey fails.
+
+      The app's own stylesheets are loaded so the rendered DOM is the real
+      thing, not an unstyled approximation.
+    -->
+
+    <link rel="stylesheet" href="../styles/tokens.css" />
+    <link rel="stylesheet" href="../styles/fonts.css" />
+    <link rel="stylesheet" href="../styles/reset.css" />
+    <link rel="stylesheet" href="../styles/base.css" />
+    <link rel="stylesheet" href="../styles/animations.css" />
+    <link rel="stylesheet" href="../styles/utilities.css" />
+    <link rel="stylesheet" href="../styles/components-ui.css" />
+    <link rel="stylesheet" href="../styles/components-brand.css" />
+    <link rel="stylesheet" href="../styles/components-layout.css" />
+    <link rel="stylesheet" href="../styles/components-calendar.css" />
+    <link rel="stylesheet" href="../styles/components-views.css" />
+
+    <style>
+      .harness {
+        margin: 0;
+        padding: 2rem 1.25rem 4rem;
+        font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+        font-size: 13px;
+        line-height: 1.6;
+        color: #2e2e2e;
+      }
+      .harness main { max-width: 60rem; margin-inline: auto; }
+      .harness h1 { font-size: 1.4rem; margin: 0 0 0.25rem; letter-spacing: -0.02em; }
+      .sub { color: #6e6e6e; margin: 0 0 1.5rem; }
+      .summary { padding: 1rem 1.25rem; border-radius: 0.75rem; font-weight: 700; margin-bottom: 1.5rem; }
+      .summary.pass { background: #e8f8ee; color: #15803d; }
+      .summary.fail { background: #fdeaea; color: #b91c1c; }
+      .group { margin-bottom: 1.5rem; }
+      .group h2 {
+        font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.14em;
+        color: #6e6e6e; margin: 0 0 0.5rem;
+      }
+      .case { padding: 2px 0 2px 1.5rem; position: relative; }
+      .case::before { position: absolute; left: 0; font-weight: 700; font-size: 10px; top: 4px; }
+      .ok::before { content: 'PASS'; color: #15803d; }
+      .no::before { content: 'FAIL'; color: #dc2626; }
+      .no { color: #b91c1c; }
+      .detail { color: #6e6e6e; padding-left: 1.5rem; font-size: 12px; }
+
+      /* The screen under test. Kept off-view but fully laid out, so measured
+         geometry and :focus behaviour stay real. */
+      #screen {
+        position: fixed;
+        left: -10000px;
+        top: 0;
+        width: 390px;
+      }
+    </style>
+  </head>
+
+  <body>
+    <div class="harness">
+      <main>
+        <h1>Journey verification</h1>
+        <p class="sub">
+          The real member views, mounted and driven against the real backend.
+        </p>
+        <div id="out"></div>
+      </main>
+    </div>
+
+    <!-- The mount point for the view under test. -->
+    <div id="screen"></div>
+
+    <!-- 1. The Google fakes, first, exactly as backend.html loads them. -->
+    <script src="fakes/GoogleFakes.js"></script>
+
+    <!-- 2. The backend, in Apps Script's alphabetical load order. -->
+    <script src="../appsscript/00_Config.gs"></script>
+    <script src="../appsscript/01_Errors.gs"></script>
+    <script src="../appsscript/02_Envelope.gs"></script>
+    <script src="../appsscript/03_Router.gs"></script>
+    <script src="../appsscript/lib/FtWeek.js"></script>
+    <script src="../appsscript/lib/FtDayMap.js"></script>
+    <script src="../appsscript/lib/FtStreak.js"></script>
+    <script src="../appsscript/lib/FtLink.js"></script>
+    <script src="../appsscript/lib/FtIdentity.js"></script>
+    <script src="../appsscript/lib/FtAchievements.js"></script>
+    <script src="../appsscript/infra/Infra.gs"></script>
+    <script src="../appsscript/repositories/Repositories.gs"></script>
+    <script src="../appsscript/services/CoreServices.gs"></script>
+    <script src="../appsscript/services/DomainServices.gs"></script>
+    <script src="../appsscript/middleware/Middleware.gs"></script>
+    <script src="../appsscript/orchestrators/Orchestrators.gs"></script>
+    <script src="../appsscript/controllers/Controllers.gs"></script>
+    <script src="../appsscript/jobs/Jobs.gs"></script>
+    <script src="../appsscript/setup/Setup.gs"></script>
+
+    <!-- 3. The journeys, as a module so they can import the real views. -->
+    <script type="module" src="journeys-suite.js"></script>
+  </body>
+</html>

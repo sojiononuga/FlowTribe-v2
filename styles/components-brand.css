@@ -1,0 +1,352 @@
+/* ==========================================================================
+   Flow Tribe — Brand Components
+   --------------------------------------------------------------------------
+   Styles for src/components/brand/*. These carry the product's personality:
+   the logo, the progress ring, the stat cards, and the success animation.
+   ========================================================================== */
+
+/* ==========================================================================
+   Logo lockup
+   --------------------------------------------------------------------------
+   Ported from v1, where it was recreated in CSS because the logo file was
+   thought to be missing. The technique is kept because it scales cleanly,
+   respects the colour tokens, and needs no image request — but the real
+   asset now lives in assets/images/ and is used wherever a raster mark is
+   more appropriate (favicon, share images).
+   ========================================================================== */
+
+.ft-logo {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--ft-space-1);
+  user-select: none;
+  /* Sizing is driven by one variable so the whole lockup scales together. */
+  --ft-logo-size: 2.75rem;
+}
+
+.ft-logo--sm { --ft-logo-size: 1.75rem; }
+.ft-logo--lg { --ft-logo-size: 3.5rem; }
+
+.ft-logo__mark {
+  position: relative;
+  display: inline-block;
+  padding-top: 0.15em;
+}
+
+.ft-logo__word {
+  font-family: var(--ft-font-display);
+  font-weight: var(--ft-weight-bold);
+  font-size: var(--ft-logo-size);
+  line-height: 1;
+  letter-spacing: -0.02em;
+  color: var(--ft-burgundy-600);
+}
+
+/* The 'w' in gold — the single accent that makes the mark recognisable. */
+.ft-logo__accent {
+  color: var(--ft-gold-400);
+}
+
+.ft-logo__the {
+  position: absolute;
+  top: -0.05em;
+  right: -0.1em;
+  z-index: 2;
+  padding: 0.15em 0.5em;
+  background-color: var(--ft-burgundy-600);
+  color: var(--ft-text-inverse);
+  font-family: var(--ft-font-brand);
+  font-size: calc(var(--ft-logo-size) * 0.2);
+  font-weight: var(--ft-weight-bold);
+  letter-spacing: var(--ft-tracking-widest);
+  border-radius: var(--ft-radius-xs);
+  line-height: 1.3;
+}
+
+/* The little tail that turns the THE chip into a speech bubble. */
+.ft-logo__the::after {
+  content: '';
+  position: absolute;
+  left: 0.6em;
+  bottom: -3px;
+  width: 7px;
+  height: 7px;
+  background-color: var(--ft-burgundy-600);
+  transform: rotate(45deg);
+}
+
+.ft-logo__tribe {
+  padding: 0.25em 0.6em 0.25em 0.95em;
+  background-color: var(--ft-burgundy-600);
+  color: var(--ft-text-inverse);
+  font-family: var(--ft-font-brand);
+  font-size: calc(var(--ft-logo-size) * 0.27);
+  font-weight: var(--ft-weight-semibold);
+  /* Wide tracking with compensating left padding, so the optical centre
+     stays true despite the trailing letter-space. */
+  letter-spacing: 0.5em;
+  border-radius: var(--ft-radius-sm);
+  line-height: 1.3;
+}
+
+/* Horizontal variant for app bars, where vertical space is tight. */
+.ft-logo--inline {
+  flex-direction: row;
+  align-items: baseline;
+  gap: var(--ft-space-2);
+}
+
+.ft-logo--inline .ft-logo__tribe {
+  font-size: calc(var(--ft-logo-size) * 0.24);
+  letter-spacing: 0.35em;
+}
+
+/* ==========================================================================
+   Progress ring
+   --------------------------------------------------------------------------
+   The dashboard's centrepiece: posts logged this week against the member's
+   chosen goal. Gold on a soft burgundy track.
+
+   The stroke is driven by two custom properties set from JS:
+     --ft-ring-circumference  the full path length
+     --ft-ring-offset         the remaining length at the current value
+   Keeping the maths in JS and the motion in CSS means the animation runs on
+   the compositor rather than in a script loop.
+   ========================================================================== */
+
+.ft-ring {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 9.5rem;
+  height: 9.5rem;
+}
+
+.ft-ring--sm { width: 6rem;  height: 6rem; }
+.ft-ring--lg { width: 12rem; height: 12rem; }
+
+.ft-ring__svg {
+  width: 100%;
+  height: 100%;
+  /* Start the sweep at 12 o'clock rather than 3. */
+  transform: rotate(-90deg);
+  overflow: visible;
+}
+
+.ft-ring__track {
+  fill: none;
+  stroke: var(--ft-burgundy-50);
+  stroke-width: 12;
+}
+
+.ft-ring__value {
+  fill: none;
+  stroke: var(--ft-gold-400);
+  stroke-width: 12;
+  stroke-linecap: round;
+  stroke-dasharray: var(--ft-ring-circumference);
+  stroke-dashoffset: var(--ft-ring-offset);
+  transition: stroke-dashoffset var(--ft-duration-slow) var(--ft-ease-out);
+}
+
+/* Goal met: the ring turns from "in progress" gold to a settled green, so
+   completion is legible at a glance without reading the number. */
+.ft-ring--complete .ft-ring__value {
+  stroke: var(--ft-success-500);
+}
+
+.ft-ring__label {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  text-align: center;
+}
+
+.ft-ring__count {
+  font-family: var(--ft-font-display);
+  font-weight: var(--ft-weight-bold);
+  font-variant-numeric: tabular-nums;
+  font-size: var(--ft-text-4xl);
+  line-height: 1;
+  color: var(--ft-burgundy-600);
+}
+
+.ft-ring__goal {
+  font-size: var(--ft-text-xs);
+  color: var(--ft-text-muted);
+  font-weight: var(--ft-weight-medium);
+}
+
+/* ==========================================================================
+   Stat card
+   ========================================================================== */
+
+.ft-stat {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ft-space-1);
+  padding: var(--ft-space-4);
+  background-color: var(--ft-bg-surface);
+  border: 1px solid var(--ft-border-subtle);
+  border-radius: var(--ft-radius-lg);
+  box-shadow: var(--ft-shadow-xs);
+  min-width: 0;
+}
+
+.ft-stat__header {
+  display: flex;
+  align-items: center;
+  gap: var(--ft-space-2);
+}
+
+.ft-stat__icon {
+  display: flex;
+  flex-shrink: 0;
+  width: var(--ft-icon-stat);
+  height: var(--ft-icon-stat);
+  color: var(--ft-text-muted);
+}
+
+.ft-stat__label {
+  font-size: var(--ft-text-xs);
+  font-weight: var(--ft-weight-medium);
+  color: var(--ft-text-muted);
+  line-height: var(--ft-leading-snug);
+}
+
+.ft-stat__value {
+  font-family: var(--ft-font-display);
+  font-weight: var(--ft-weight-bold);
+  font-variant-numeric: tabular-nums;
+  font-size: var(--ft-text-3xl);
+  line-height: 1.05;
+  color: var(--ft-burgundy-600);
+}
+
+/* The placeholder shown where a value doesn't apply — an unranked member,
+   a stat with no data yet. Muted and lighter so it reads as "nothing here"
+   rather than as a real figure. */
+.ft-stat__value--empty {
+  color: var(--ft-neutral-300);
+}
+
+.ft-stat__meta {
+  font-size: var(--ft-text-xs);
+  color: var(--ft-text-muted);
+}
+
+.ft-stat--accent .ft-stat__value  { color: var(--ft-gold-500); }
+.ft-stat--success .ft-stat__value { color: var(--ft-success-700); }
+
+/* ==========================================================================
+   Streak flame
+   --------------------------------------------------------------------------
+   Marks an active streak. Deliberately still — an animated flame beside a
+   number the member checks daily becomes noise within a week.
+   ========================================================================== */
+
+.ft-flame {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--ft-space-1);
+  color: var(--ft-gold-400);
+}
+
+.ft-flame__icon { width: 1em; height: 1em; }
+
+/* Dormant streak: same shape, drained of colour. */
+.ft-flame--cold { color: var(--ft-neutral-300); }
+
+/* ==========================================================================
+   Success burst
+   --------------------------------------------------------------------------
+   Plays once when a post is logged. A drawn checkmark plus eight radiating
+   rays. Short, gold, and reserved for this one moment so it keeps its
+   meaning — this is the reward the whole product is built around.
+   ========================================================================== */
+
+.ft-success-burst {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 5.5rem;
+  height: 5.5rem;
+}
+
+.ft-success-burst__disc {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  background-color: var(--ft-success-500);
+  border-radius: var(--ft-radius-full);
+  animation: ft-pop-in var(--ft-duration-celebrate) var(--ft-ease-spring) both;
+}
+
+.ft-success-burst__check {
+  width: 44%;
+  height: 44%;
+  fill: none;
+  stroke: var(--ft-neutral-0);
+  stroke-width: 3.5;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-dasharray: 48;
+  stroke-dashoffset: 48;
+  animation: ft-draw-check var(--ft-duration-slow) var(--ft-ease-out) 180ms both;
+}
+
+.ft-success-burst__rays {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.ft-success-burst__ray {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 4px;
+  height: 12px;
+  margin: -6px 0 0 -2px;
+  background-color: var(--ft-gold-400);
+  border-radius: var(--ft-radius-full);
+  transform-origin: 50% 50%;
+  animation: ft-burst var(--ft-duration-celebrate) var(--ft-ease-out) 120ms both;
+}
+
+/* ==========================================================================
+   Empty leaderboard prompt
+   --------------------------------------------------------------------------
+   Shown to a member with no posts in the current week. The copy is fixed by
+   product decision: "Post this week to join the leaderboard." Styled as an
+   invitation rather than an error, because that is what it is.
+   ========================================================================== */
+
+.ft-rank-prompt {
+  display: flex;
+  align-items: center;
+  gap: var(--ft-space-3);
+  padding: var(--ft-space-4);
+  background-color: var(--ft-gold-50);
+  border: 1px dashed var(--ft-gold-300);
+  border-radius: var(--ft-radius-lg);
+  font-size: var(--ft-text-sm);
+  color: var(--ft-gold-700);
+  line-height: var(--ft-leading-snug);
+}
+
+.ft-rank-prompt__icon {
+  flex-shrink: 0;
+  width: 1.25rem;
+  height: 1.25rem;
+  color: var(--ft-gold-500);
+}
