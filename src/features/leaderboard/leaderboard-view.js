@@ -2,10 +2,10 @@
  * Leaderboard.
  *
  * Community before competition. Members are shown alongside their own goal, so
- * a 3-post member on 3 reads as a success rather than as sixth place — the
+ * a member on 3 actions reads as a success rather than as sixth place — the
  * comparison that matters is against your own promise.
  *
- * Members with no posts in scope are absent, not ranked last, and the caller
+ * Members with no actions in scope are absent, not ranked last, and the caller
  * sees an invitation instead of a zero.
  *
  * @module features/leaderboard/leaderboard-view
@@ -76,8 +76,8 @@ export default function LeaderboardView() {
 
   return el('div', { class: 'ft-animate-in' }, [
     PageHeader({
-      title: 'The tribe',
-      subtitle: 'Everyone measured against the goal they chose.',
+      title: 'The Tribe',
+      subtitle: 'Collective movement, without turning people into a scoreboard.',
     }),
     tabs,
     body,
@@ -87,8 +87,8 @@ export default function LeaderboardView() {
 function render(data) {
   if (!data.entries.length) {
     return Card({}, EmptyState({
-      title: 'Nobody has posted yet',
-      message: 'Be the first name here this week.',
+      title: 'The Tribe is quiet for now',
+      message: 'One meaningful action is enough to start the wave.',
       iconPaths: Icons.trophy,
     }));
   }
@@ -103,7 +103,7 @@ function render(data) {
     data.unrankedCount > 0
       ? el('p', {
           class: 'ft-text-xs ft-text-muted ft-text-center',
-          text: `${plural(data.unrankedCount, 'member')} yet to post this week. There is still time.`,
+          text: `${plural(data.unrankedCount, 'member')} yet to show up this week. There is still time.`,
         })
       : null,
   ]);

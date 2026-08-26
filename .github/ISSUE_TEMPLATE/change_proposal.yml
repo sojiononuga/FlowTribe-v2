@@ -1,0 +1,40 @@
+name: Change proposal
+description: Propose a product, architecture, schema, security, or deployment change.
+title: "[Change] "
+labels: ["change-proposal"]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem or opportunity
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed change
+    validations:
+      required: true
+  - type: textarea
+    id: tradeoffs
+    attributes:
+      label: Trade-offs and alternatives
+      description: Explain why this is preferable to preserving the current design.
+    validations:
+      required: true
+  - type: checkboxes
+    id: reserved
+    attributes:
+      label: Reserved-matter check
+      options:
+        - label: Product/business behaviour
+        - label: Authentication/authorisation/security
+        - label: Data model or live-data handling
+        - label: Runtime dependency or external service
+        - label: Hosting/deployment architecture
+        - label: Locked visual/product decision
+  - type: textarea
+    id: approval
+    attributes:
+      label: Approval reference
+      description: Required before implementation if any reserved-matter box applies.

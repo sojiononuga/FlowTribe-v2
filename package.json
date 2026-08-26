@@ -1,0 +1,14 @@
+{
+  "name": "flowtribe-v2",
+  "version": "2.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Development verification tooling for Flow Tribe v2. The application itself has zero runtime package dependencies.",
+  "scripts": {
+    "verify": "node tests/verify-browser.mjs",
+    "test": "npm run verify"
+  },
+  "devDependencies": {
+    "playwright": "1.62.1"
+  }
+}

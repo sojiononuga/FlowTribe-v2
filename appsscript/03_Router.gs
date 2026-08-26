@@ -44,6 +44,7 @@ function getActionTable_() {
     'member.calendar': { capability: 'dashboard:self', handler: MemberController.calendar },
     'member.updateConsent': { capability: 'profile:update:self', handler: MemberController.updateConsent },
     'member.updateName': { capability: 'profile:update:self', handler: MemberController.updateName },
+    'member.updateGoal': { capability: 'profile:update:self', handler: MemberController.updateGoal },
     'member.profile': { capability: 'profile:read:self', handler: MemberController.profile },
 
     // --- Milestones and levels ---
@@ -57,6 +58,11 @@ function getActionTable_() {
 
     // --- Submissions ---
     'submission.create': { capability: 'submission:create', handler: SubmissionController.create },
+    'action.create': { capability: 'submission:create', handler: SubmissionController.createAction },
+
+    // --- Flow Adapt ---
+    'adaptation.propose': { capability: 'dashboard:self', handler: AdaptationController.propose },
+    'adaptation.accept': { capability: 'dashboard:self', handler: AdaptationController.accept },
 
     // --- Leaderboard ---
     'leaderboard.get': { capability: 'leaderboard:read', handler: LeaderboardController.get },

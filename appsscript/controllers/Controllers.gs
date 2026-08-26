@@ -33,7 +33,7 @@ var AuthController = (function () {
 
   function register(ctx) {
     Validate.required(ctx.payload, [
-      'fullName', 'username', 'pin', 'pinConfirm', 'platform', 'weeklyGoal', 'inviteCode',
+      'fullName', 'username', 'pin', 'pinConfirm', 'weeklyGoal', 'inviteCode',
     ]);
 
     // Keyed on the invite code: single-use codes make this a backstop rather
@@ -45,8 +45,11 @@ var AuthController = (function () {
       username: Validate.str(ctx.payload.username, 20),
       pin: String(ctx.payload.pin),
       pinConfirm: String(ctx.payload.pinConfirm),
-      platform: Validate.str(ctx.payload.platform, 20),
+      platform: Validate.str(ctx.payload.platform || 'Flow', 20),
       weeklyGoal: Validate.int(ctx.payload.weeklyGoal, 3),
+      goalTitle: Validate.str(ctx.payload.goalTitle || '', 120),
+      showingUp: Validate.str(ctx.payload.showingUp || '', 160),
+      constraints: Validate.str(ctx.payload.constraints || '', 240),
       inviteCode: Validate.str(ctx.payload.inviteCode, 20),
       consentFeature: Boolean(ctx.payload.consentFeature),
     }, ctx.userAgent);
@@ -236,6 +239,18 @@ var MemberController = (function () {
     return { member: MemberService.updateFullName(ctx.member, ctx.payload.fullName) };
   }
 
+  function updateGoal(ctx) {
+    Validate.required(ctx.payload, ['goalTitle', 'showingUp', 'weeklyGoal']);
+    return {
+      member: MemberService.updateGoal(ctx.member, {
+        goalTitle: ctx.payload.goalTitle,
+        showingUp: ctx.payload.showingUp,
+        constraints: ctx.payload.constraints,
+        weeklyGoal: ctx.payload.weeklyGoal,
+      }),
+    };
+  }
+
   /** The milestone gallery. Shape matches the approved milestones screen. */
   function milestones(ctx) {
     var snap = MilestoneService.snapshot(ctx.member);
@@ -325,6 +340,7 @@ var MemberController = (function () {
     calendar: calendar,
     updateConsent: updateConsent,
     updateName: updateName,
+    updateGoal: updateGoal,
     milestones: milestones,
     markMilestonesSeen: markMilestonesSeen,
     levels: levels,
@@ -407,7 +423,69 @@ var SubmissionController = (function () {
     return response;
   }
 
-  return { create: create };
+  function createAction(ctx) {
+    Validate.required(ctx.payload, ['title']);
+
+    var idemKey = 'idem:action:' + ctx.member.memberId + ':' + (ctx.requestId || '');
+    if (ctx.requestId) {
+      var previous = CacheClient.get(idemKey);
+      if (previous) return previous;
+    }
+
+    var result = SubmissionFlow.create(ctx.member, '', {
+      title: Validate.str(ctx.payload.title, 160),
+      evidence: Validate.str(ctx.payload.evidence || '', 500),
+    });
+
+    var response = {
+      action: {
+        actionId: result.submission.submissionId,
+        title: result.submission.actionTitle,
+        evidence: result.submission.evidence,
+        timestamp: result.submission.timestamp,
+        dayKey: result.submission.dayKey,
+      },
+      statsSettling: Boolean(result.statsSettling),
+      newMilestones: (result.newMilestones || []).map(publicMilestone_),
+      levelUp: result.levelUp || null,
+    };
+
+    if (!result.statsSettling) {
+      response.stats = {
+        actionsThisWeek: result.week.postCount,
+        weeklyGoal: result.week.goalAtWeek,
+        distinctDays: result.week.distinctDays,
+        goalMet: result.week.goalMet,
+        currentWeekStreak: result.streaks.current,
+        longestWeekStreak: result.streaks.longest,
+        allTimeActions: ctx.member.allTimePosts,
+        activeDays: result.calendar.activeDays,
+      };
+    }
+
+    if (ctx.requestId) CacheClient.put(idemKey, response, DEFAULTS.IDEMPOTENCY_WINDOW_SECONDS);
+    return response;
+  }
+
+  return { create: create, createAction: createAction };
+})();
+
+var AdaptationController = (function () {
+  function propose(ctx) {
+    Validate.required(ctx.payload, ['constraint']);
+    return { proposal: FlowAdaptService.propose(ctx.member, Validate.str(ctx.payload.constraint, 500)) };
+  }
+
+  function accept(ctx) {
+    Validate.required(ctx.payload, ['proposalId', 'today']);
+    return FlowAdaptService.accept(ctx.member, {
+      proposalId: ctx.payload.proposalId,
+      category: ctx.payload.category,
+      today: ctx.payload.today,
+    });
+  }
+
+  return { propose: propose, accept: accept };
 })();
 
 var LeaderboardController = (function () {

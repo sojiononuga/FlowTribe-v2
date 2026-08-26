@@ -118,15 +118,27 @@ const routes = [
   // --- Member ---
   {
     path: '/dashboard',
-    title: 'Dashboard',
+    title: 'Flow',
     guard: requireAuth,
     view: () => import('./features/dashboard/dashboard-view.js'),
   },
   {
     path: '/submit',
-    title: 'Log a post',
+    title: 'Show up',
     guard: requireAuth,
     view: () => import('./features/submit/submit-view.js'),
+  },
+  {
+    path: '/adapt',
+    title: 'Flow Adapt',
+    guard: requireAuth,
+    view: () => import('./features/adapt/adapt-view.js'),
+  },
+  {
+    path: '/direction',
+    title: 'Direction',
+    guard: requireAuth,
+    view: () => import('./features/direction/direction-view.js'),
   },
   {
     path: '/leaderboard',
@@ -164,7 +176,7 @@ const Blank = () => el('div');
 const NAV_ITEMS = [
   { id: 'dashboard', label: 'Home', href: '#/dashboard', iconPaths: Icons.home },
   { id: 'leaderboard', label: 'Tribe', href: '#/leaderboard', iconPaths: Icons.users },
-  { id: 'submit', label: 'Log a post', href: '#/submit', iconPaths: Icons.plus, cta: true },
+  { id: 'submit', label: 'Show up', href: '#/submit', iconPaths: Icons.plus, cta: true },
   { id: 'milestones', label: 'Milestones', href: '#/milestones', iconPaths: Icons.award },
   { id: 'profile', label: 'You', href: '#/profile', iconPaths: Icons.user },
 ];

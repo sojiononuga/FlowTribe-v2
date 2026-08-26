@@ -99,8 +99,17 @@ var RegistrationFlow = (function () {
       throw fail_('VALIDATION_FAILED', 'Enter your full name.', { field: 'fullName' });
     }
 
-    if (PLATFORMS.indexOf(input.platform) === -1) {
-      throw fail_('VALIDATION_FAILED', 'Pick one of the listed platforms.', { field: 'platform' });
+    var platform = PLATFORMS.indexOf(input.platform) !== -1 ? input.platform : 'Flow';
+    var goalTitle = String(input.goalTitle || '').trim();
+    var showingUp = String(input.showingUp || '').trim();
+    var constraints = String(input.constraints || '').trim();
+
+    // Legacy clients did not send goal fields. Keep them compatible while the
+    // new Flow experience makes the destination explicit.
+    if (!goalTitle) goalTitle = platform === 'Flow' ? 'Build something meaningful' : 'Show up consistently on ' + platform;
+    if (!showingUp) showingUp = 'Complete one meaningful action';
+    if (goalTitle.length > 120 || showingUp.length > 160 || constraints.length > 240) {
+      throw fail_('VALIDATION_FAILED', 'Keep your direction concise.');
     }
 
     var goal = Number(input.weeklyGoal);
@@ -109,7 +118,7 @@ var RegistrationFlow = (function () {
     }
 
     var credentials = AuthService.hashNewPin(input.pin);
-    var context = { input: input, fullName: fullName, goal: goal, credentials: credentials };
+    var context = { input: input, fullName: fullName, goal: goal, platform: platform, goalTitle: goalTitle, showingUp: showingUp, constraints: constraints, credentials: credentials };
 
     LockClient.withLock('registration', function () {
       Pipeline.run('registration', [
@@ -139,8 +148,11 @@ var RegistrationFlow = (function () {
               fullName: ctx.fullName,
               pinHash: ctx.credentials.hash,
               pinSalt: ctx.credentials.salt,
-              platform: ctx.input.platform,
+              platform: ctx.platform,
               weeklyGoal: ctx.goal,
+              goalTitle: ctx.goalTitle,
+              showingUp: ctx.showingUp,
+              constraints: ctx.constraints,
               joinDate: nowIso_(),
               status: MEMBER_STATUS.ACTIVE,
               // Role is never taken from the payload. If registration accepted
@@ -184,7 +196,7 @@ var RegistrationFlow = (function () {
     var session = SessionService.create(context.member, userAgent);
 
     AuditService.record(context.member, 'REGISTER', {
-      details: { invite: context.invite.code, platform: context.input.platform },
+      details: { invite: context.invite.code, platform: context.platform, goalTitle: context.goalTitle },
     });
 
     return {
@@ -271,12 +283,15 @@ var SubmissionFlow = (function () {
    *
    * @returns {{submission, stats, newMilestones, levelUp, statsSettling}}
    */
-  function create(member, rawLink) {
-    // Outside the lock: validation is where most failures happen, and a
-    // rejected duplicate should neither wait on nor hold a lock.
-    var validated = SubmissionService.validate(member, rawLink);
+  function create(member, rawLink, actionInput) {
+    // The same append-first pipeline powers legacy content submissions and
+    // universal Flow actions. That keeps one source of truth for momentum.
+    var isAction = Boolean(actionInput);
+    var validated = isAction
+      ? ActionService.validate(member, actionInput)
+      : SubmissionService.validate(member, rawLink);
 
-    var context = { member: member, validated: validated, milestones: [], levelUp: null };
+    var context = { member: member, validated: validated, isAction: isAction, milestones: [], levelUp: null };
 
     try {
       LockClient.withLock('member:' + member.memberId, function () {
@@ -284,7 +299,9 @@ var SubmissionFlow = (function () {
           {
             name: 'appendLedger',
             run: function (ctx) {
-              ctx.row = SubmissionService.buildRow(ctx.member, ctx.validated);
+              ctx.row = ctx.isAction
+                ? ActionService.buildRow(ctx.member, ctx.validated)
+                : SubmissionService.buildRow(ctx.member, ctx.validated);
               SubmissionRepo.append(ctx.row);
               ctx.ledgerWritten = true;
             },
@@ -364,10 +381,8 @@ var SubmissionFlow = (function () {
     } catch (error) {
       if (isAppError_(error)) throw error;
 
-      // The post itself succeeded; something downstream did not. Telling a
-      // member their post failed when it did not is the exact v1 defect this
-      // rebuild exists to eliminate — so the submission is reported as the
-      // success it was, and the rollups are repaired out of band.
+      // The action itself succeeded; something downstream did not. The ledger
+      // remains authoritative and the derived rollups can be repaired later.
       if (context.ledgerWritten) {
         AuditRepo.append({
           actorId: member.memberId,

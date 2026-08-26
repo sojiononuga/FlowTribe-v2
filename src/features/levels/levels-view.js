@@ -82,7 +82,7 @@ function render(data) {
 
     el('p', {
       class: 'ft-text-xs ft-text-muted ft-text-center',
-      text: 'Levels need both posts and goal weeks. Showing up matters as much as volume — and a level never falls.',
+      text: 'Levels reflect meaningful actions and goal weeks. Returning matters as much as volume — and a level never falls.',
     }),
   ]);
 }

@@ -22,7 +22,6 @@ import { ActivityCalendar, StatCard } from '../../components/brand/index.js';
 import { LevelChip, MilestoneBadge } from '../../components/brand/milestone.js';
 import { PageHeader, Section } from '../../components/layout/index.js';
 import { Icons } from '../../lib/icons.js';
-import { getPlatform, goalLabel } from '../../lib/platforms.js';
 import { date, number, plural } from '../../lib/format.js';
 import { call } from '../../core/api.js';
 import { toAppError } from '../../core/errors.js';
@@ -56,7 +55,6 @@ export default function ProfileView() {
 
 function render(data) {
   const { member, stats, calendar, milestones, level, joinDate } = data;
-  const platform = getPlatform(member.platform);
   // `member.profile` returns { totalEarned, totalAvailable, recent } — `recent`
   // is already the earned list, newest first. There is no `milestones.milestones`;
   // reading one crashed this screen on every load until Phase 10.
@@ -77,16 +75,16 @@ function render(data) {
       ]),
 
       el('dl', { class: 'ft-profile-facts' }, [
-        Fact('Platform', platform.label, platform.iconPaths, platform.color),
-        Fact('Weekly goal', goalLabel(member.weeklyGoal), Icons.target),
+        Fact('Direction', member.goalTitle || 'Set your direction', Icons.target),
+        Fact('Weekly rhythm', `${member.weeklyGoal} meaningful actions`, Icons.calendarCheck),
         Fact('Member since', date(joinDate, { withYear: true }), Icons.calendar),
       ]),
     ]),
 
     /* Numbers */
-    Section({ title: 'Posting statistics' }, [
+    Section({ title: 'Movement statistics' }, [
       el('div', { class: 'ft-grid ft-grid--4' }, [
-        StatCard({ label: 'Lifetime posts', value: number(stats.allTimePosts), iconPaths: Icons.fileText }),
+        StatCard({ label: 'Lifetime actions', value: number(stats.allTimePosts), iconPaths: Icons.fileText }),
         StatCard({ label: 'Active days', value: number(stats.activeDays), iconPaths: Icons.calendarCheck }),
         StatCard({ label: 'Goal weeks', value: number(stats.perfectWeeks), iconPaths: Icons.checkCircle }),
         StatCard({
@@ -139,9 +137,9 @@ function render(data) {
           )
         : Card({}, EmptyState({
             title: 'No milestones yet',
-            message: 'Your first one unlocks the moment you log a post.',
+            message: 'Your first one unlocks as you begin showing up.',
             iconPaths: Icons.medal,
-            action: Button({ label: 'Log a post', size: 'sm', onClick: () => navigate('/submit') }),
+            action: Button({ label: 'Show up', size: 'sm', onClick: () => navigate('/submit') }),
           })),
     ),
 
@@ -153,8 +151,9 @@ function render(data) {
 
         el('p', {
           class: 'ft-text-sm ft-text-muted',
-          text: 'Need your username, platform, or goal changed? Message the team and we will sort it.',
+          text: 'Your direction belongs to you. Change it deliberately; adapt the path whenever life changes.',
         }),
+        Button({ label: 'Edit my direction', variant: 'secondary', block: true, iconPaths: Icons.target, onClick: () => navigate('/direction') }),
         Button({
           label: 'Log out',
           variant: 'secondary',

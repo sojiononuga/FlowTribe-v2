@@ -9,6 +9,30 @@ anything in `docs/` or in the `.docx` design files.
 
 ---
 
+## 0. Strategic product direction override — approved 25 August 2026
+
+The project owner has explicitly superseded the earlier description of Flow Tribe as a content-creation or creator-only product.
+
+**Binding strategic direction:**
+
+> **Flow Tribe is not a content-writing app. Content creation is one use case inside a much broader adaptive goal-and-action system.**
+
+The approved north star is now defined in [`product-vision.md`](product-vision.md): Flow helps people pursue meaningful goals, translate them into action, adapt when changing circumstances make the current plan unrealistic, recover without treating disruption as failure, build momentum, and move with a Tribe.
+
+This strategic override **does not invalidate the verified v2 implementation as a release baseline**. Existing creator-specific behaviour may remain temporarily as a compatibility vertical while the universal domain is introduced safely. Therefore:
+
+- the current implementation remains the source of truth for behaviour that has not yet been intentionally migrated;
+- creator-specific terminology and schema are **not** frozen as the permanent product ontology;
+- `Post`, `Submission` and `Platform` should progressively map to the broader `Action`, `Evidence` and `Goal Context` model;
+- future product decisions must not make content creation the product boundary;
+- a big-bang rewrite is not authorised merely for terminology purity; preserve the verified baseline while generalising through tested seams;
+- the long-term product centre is Goal → Plan → Action → Evidence → Progress → Constraint → Adaptation → Recovery → Momentum, with Tribe around the loop;
+- Flow Adapt is the first signature intelligence capability: when circumstances change, Flow proposes a revised path while preserving the user's meaningful goal where appropriate.
+
+Where an older document calls Flow Tribe the "Duolingo of content creation" or a "content accountability platform", that language is now **historical/legacy**, not governing product direction.
+
+---
+
 ## 1. The decision, in one line
 
 > **The implementation is the source of truth for how Flow Tribe *works*.
@@ -36,12 +60,13 @@ They must never be recreated, rewritten, replaced, or merged.
 
 ---
 
-## 3. FROZEN — do not change without explicit owner approval
+## 3. CURRENT RELEASE BASELINE — protect during migration
 
-These are settled. **Do not change, refactor, "improve", or re-litigate any of
-them**, even if a design document describes something different.
+The items below describe the verified creator-shaped v2 release baseline. They remain protected against casual refactoring or accidental drift, but the owner's 25 August 2026 strategic approval explicitly authorises their **controlled supersession where necessary to implement the universal Flow domain**.
 
-| # | Frozen |
+Do not change them piecemeal. A migration must preserve compatibility or provide an evidenced replacement, update the relevant contracts and tests, and keep a rollback path until the replacement is verified.
+
+| # | Protected current-release behaviour |
 |---|---|
 | 1 | **Authentication flow** — including exponential backoff and constant-time comparison |
 | 2 | **Registration flow** — three steps, invite-gated |
@@ -59,7 +84,7 @@ them**, even if a design document describes something different.
 | 14 | **Navigation flow** — routes, guards, information architecture |
 | 15 | **All engineering decisions already implemented** — D1–D42 in [`decisions.md`](decisions.md) |
 
-### Also frozen — earlier locked decisions, unchanged
+### Still locked unless a specific product decision supersedes them
 
 - **No emojis anywhere in the application.** The design documents use emojis
   as shorthand; the Design System itself specifies *"premium icon badges

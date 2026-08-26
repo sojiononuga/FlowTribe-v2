@@ -524,6 +524,167 @@ var FlowLevelService = (function () {
 })();
 
 /* ==========================================================================
+   ActionService — universal proof of showing up
+   ========================================================================== */
+
+var ActionService = (function () {
+  function validate(member, input) {
+    var title = String(input.title || '').trim();
+    var evidence = String(input.evidence || '').trim();
+
+    if (title.length < 2 || title.length > 160) {
+      throw fail_('VALIDATION_FAILED', 'Say what you did in one clear line.', { field: 'title' });
+    }
+    if (evidence.length > 500) {
+      throw fail_('VALIDATION_FAILED', 'Keep evidence under 500 characters.', { field: 'evidence' });
+    }
+
+    var dayKey = FtWeek.dayKey(new Date(), TIMEZONE);
+    if (SubmissionRepo.countForDay(member.memberId, dayKey) >= SettingsService.dailyCap()) {
+      throw fail_('DAILY_CAP');
+    }
+
+    return { title: title, evidence: evidence, dayKey: dayKey };
+  }
+
+  function buildRow(member, validated) {
+    var now = new Date();
+    var dayKey = validated.dayKey;
+    var weekStart = FtWeek.weekStartKey(now, TIMEZONE);
+    var id = SubmissionRepo.nextId();
+    var evidenceLink = /^https?:\/\//i.test(validated.evidence) ? validated.evidence : '';
+
+    return {
+      submissionId: id,
+      timestamp: now.toISOString(),
+      memberId: member.memberId,
+      name: member.fullName,
+      username: member.username,
+      platform: 'Flow',
+      contentLink: evidenceLink,
+      linkKey: '',
+      dayKey: dayKey,
+      weekStart: weekStart,
+      weekNumber: FtWeek.isoWeekNumber(weekStart),
+      month: FtWeek.monthOf(dayKey),
+      year: FtWeek.yearOf(dayKey),
+      goalAtSubmission: member.weeklyGoal,
+      actionTitle: validated.title,
+      evidence: validated.evidence,
+      source: 'action',
+    };
+  }
+
+  return { validate: validate, buildRow: buildRow };
+})();
+
+/* ==========================================================================
+   FlowAdaptService — adapt the path, preserve the destination
+   ========================================================================== */
+
+var FlowAdaptService = (function () {
+  function classify(text) {
+    var value = String(text || '').toLowerCase();
+    if (/power|light|electric|nepa|battery|charge/.test(value)) return 'power';
+    if (/internet|data|network|wifi|connection/.test(value)) return 'connectivity';
+    if (/money|cost|cash|expensive|afford|budget/.test(value)) return 'cost';
+    if (/sick|ill|health|tired|exhaust|rest|pain/.test(value)) return 'wellbeing';
+    if (/traffic|travel|commute|journey|road/.test(value)) return 'mobility';
+    if (/work|busy|time|meeting|deadline|school|exam|family/.test(value)) return 'time';
+    if (/overwhelm|motivat|discourag|anxious|stuck|frustrat/.test(value)) return 'momentum';
+    return 'change';
+  }
+
+  function planFor(category, member) {
+    var showingUp = member.showingUp || 'make one meaningful move';
+    var plans = {
+      power: {
+        headline: 'Switch the task, not the goal.',
+        reason: 'Your original route depends on power. Keep momentum with a phone-first or offline step.',
+        today: 'Do the smallest offline or phone-based version of: ' + showingUp,
+        next: 'Return to the full task when power is stable.',
+      },
+      connectivity: {
+        headline: 'Go low-bandwidth for now.',
+        reason: 'Connectivity is the constraint, not your commitment.',
+        today: 'Work offline on the part of your goal that does not need a connection.',
+        next: 'Queue the upload, sync or research step for your next reliable connection.',
+      },
+      cost: {
+        headline: 'Reduce the cost of the path.',
+        reason: 'A paid tool or expense should not become a verdict on the goal.',
+        today: 'Complete a free preparation step that moves the same goal forward.',
+        next: 'Use a free or lower-cost route until the original option is affordable.',
+      },
+      wellbeing: {
+        headline: 'Protect recovery and keep the thread.',
+        reason: 'Rest can be part of progress. Flow will not turn illness or exhaustion into failure.',
+        today: 'Rest, or choose a five-minute version only if it genuinely helps.',
+        next: 'Resume with a smaller first step when your energy returns.',
+      },
+      mobility: {
+        headline: 'Use the time you actually have.',
+        reason: 'Travel changed the environment, so the task needs to change with it.',
+        today: 'Choose a safe phone-based thinking, planning or review step.',
+        next: 'Save tool-heavy work for when you are settled.',
+      },
+      time: {
+        headline: 'Shrink today, preserve the week.',
+        reason: 'Your available time changed. The destination does not need to.',
+        today: 'Give this 15 focused minutes: ' + showingUp,
+        next: 'Rebalance the remaining weekly actions around your real availability.',
+      },
+      momentum: {
+        headline: 'Make returning the win.',
+        reason: 'You do not need a perfect restart. You need one credible return.',
+        today: 'Do the smallest version that takes ten minutes or less.',
+        next: 'Build back up only after the next action is complete.',
+      },
+      change: {
+        headline: 'Change the path, not the goal.',
+        reason: 'Something changed. Flow is treating that as new information, not failure.',
+        today: 'Choose the smallest useful version of: ' + showingUp,
+        next: 'Adjust the rest of the week around what is true now.',
+      },
+    };
+    return plans[category];
+  }
+
+  function propose(member, constraint) {
+    var text = String(constraint || '').trim();
+    if (text.length < 3 || text.length > 500) {
+      throw fail_('VALIDATION_FAILED', 'Tell Flow what changed in a sentence or two.', { field: 'constraint' });
+    }
+    var category = classify(text);
+    var plan = planFor(category, member);
+    var proposal = {
+      proposalId: 'ADP-' + String(Date.now()) + '-' + member.memberId,
+      category: category,
+      constraint: text,
+      preservedGoal: member.goalTitle || 'Your current goal',
+      headline: plan.headline,
+      reason: plan.reason,
+      today: plan.today,
+      next: plan.next,
+    };
+    AuditService.record(member, 'ADAPT_PROPOSE', { details: { category: category, constraint: text } });
+    return proposal;
+  }
+
+  function accept(member, proposal) {
+    var id = String(proposal.proposalId || '').slice(0, 80);
+    var today = String(proposal.today || '').slice(0, 300);
+    if (!id || !today) throw fail_('VALIDATION_FAILED', 'That adaptation is incomplete.');
+    AuditService.record(member, 'ADAPT_ACCEPT', {
+      details: { proposalId: id, category: String(proposal.category || ''), today: today },
+    });
+    return { accepted: true, proposalId: id, today: today };
+  }
+
+  return { propose: propose, accept: accept };
+})();
+
+/* ==========================================================================
    SubmissionService — validation and dedupe
    ========================================================================== */
 
@@ -590,6 +751,9 @@ var SubmissionService = (function () {
       month: FtWeek.monthOf(dayKey),
       year: FtWeek.yearOf(dayKey),
       goalAtSubmission: member.weeklyGoal,
+      actionTitle: '',
+      evidence: validated.link,
+      source: 'legacy-post',
     };
   }
 
@@ -602,6 +766,10 @@ var SubmissionService = (function () {
           submissionId: row.submissionId,
           platform: row.platform,
           contentLink: row.contentLink,
+          link: row.contentLink,
+          actionTitle: row.actionTitle || (row.platform ? row.platform + ' post' : 'Action'),
+          evidence: row.evidence || row.contentLink,
+          source: row.source || 'legacy-post',
           timestamp: row.timestamp,
           dayKey: row.dayKey,
         };
