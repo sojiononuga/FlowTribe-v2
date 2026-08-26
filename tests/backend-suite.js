@@ -103,6 +103,9 @@ import { Icons } from '../src/lib/icons.js';
     setupSecrets();
     setupBootstrap();
     setupSeedCatalog();
+    // Keep the harness deterministic after the production founding cutoff.
+    // This changes test data only; the deployed cutoff remains configuration.
+    SettingsRepo.set('milestones.foundingPeriodEnd', '2099-12-31', 'TEST');
     setupSeedSuperAdmin();
 
     var admin = ok('auth.login', { username: ADMIN_USERNAME, pin: ADMIN_PIN });
@@ -1609,6 +1612,7 @@ import { Icons } from '../src/lib/icons.js';
     'milestones.markSeen': 'Celebration is driven by newMilestones[] in the submission response; the Seen column has no reader.',
     'profile.get': 'Stage 2 profile. The member-facing screen is deferred, not built.',
     'profile.update': 'Stage 2 profile. Same.',
+    'submission.create': 'Legacy content-post endpoint retained for backward compatibility; Universal Flow uses action.create.',
     'admin.members.delete': 'Deliberately hard to reach. Deactivation is the normal path and deletion refuses when history exists.',
   };
 
@@ -1863,7 +1867,7 @@ import { Icons } from '../src/lib/icons.js';
       goalTitle: 'Finish my professional portfolio',
       showingUp: 'Complete one portfolio section',
       constraints: 'Weeknights are short',
-      weeklyGoal: 4,
+      weeklyGoal: 5,
     }, env.member.token);
 
     CacheClient.reset();
@@ -1871,7 +1875,7 @@ import { Icons } from '../src/lib/icons.js';
     equal(profile.member.goalTitle, 'Finish my professional portfolio');
     equal(profile.member.showingUp, 'Complete one portfolio section');
     equal(profile.member.constraints, 'Weeknights are short');
-    equal(profile.member.weeklyGoal, 4);
+    equal(profile.member.weeklyGoal, 5);
   });
 
   it('direction validation refuses a vague or empty goal rather than saving junk', function () {
