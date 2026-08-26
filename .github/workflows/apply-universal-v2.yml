@@ -50,6 +50,11 @@ jobs:
             test -f tests/verify-browser.mjs
             test -f src/core/config.example.js
 
+            # The Actions token may write source but may not create workflow files.
+            # Stage the product tree first; the verification workflow is restored
+            # through the repository connection after the source is green.
+            rm -f .github/workflows/verify.yml
+
             git config user.name 'Flow Tribe CI'
             git config user.email 'actions@users.noreply.github.com'
             git add -A
