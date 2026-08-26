@@ -1,0 +1,38 @@
+name: verify Flow Tribe v2
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+
+      - name: Set up Node 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Prepare test configuration
+        run: cp src/core/config.example.js src/core/config.js
+
+      - name: Verify JavaScript syntax
+        run: find src tests -type f \( -name '*.js' -o -name '*.mjs' \) -print0 | xargs -0 -n1 node --check
+
+      - name: Install verification tooling
+        run: |
+          npm install --no-audit --no-fund --package-lock=false
+          npx playwright install --with-deps chromium
+
+      - name: Run complete verification suite
+        run: npm run verify
