@@ -47,6 +47,9 @@ var MemberRepo = (function () {
       lastSubmissionDate: toIso_(row[M.LAST_SUBMISSION_DATE]),
       flowLevelId: String(row[M.FLOW_LEVEL_ID] || 'seedling'),
       flowLevelAt: toIso_(row[M.FLOW_LEVEL_AT]),
+      goalTitle: String(row[M.GOAL_TITLE] || ''),
+      showingUp: String(row[M.SHOWING_UP] || ''),
+      constraints: String(row[M.CONSTRAINTS] || ''),
     };
   }
 
@@ -127,6 +130,9 @@ var MemberRepo = (function () {
     row[M.FLOW_LEVEL_ID] = member.flowLevelId || 'seedling';
     row[M.FLOW_LEVEL_AT] = member.joinDate;
     row[M.UPDATED_AT] = nowIso_();
+    row[M.GOAL_TITLE] = member.goalTitle || '';
+    row[M.SHOWING_UP] = member.showingUp || '';
+    row[M.CONSTRAINTS] = member.constraints || '';
 
     var rowIndex = SheetClient.append(SHEETS.MEMBERS, fill_(row, MEMBERS_HEADERS.length));
     member.rowIndex = rowIndex;
@@ -155,6 +161,7 @@ var MemberRepo = (function () {
       longestWeekStreak: M.LONGEST_WEEK_STREAK, perfectWeeks: M.PERFECT_WEEKS,
       lastSubmissionDate: M.LAST_SUBMISSION_DATE,
       flowLevelId: M.FLOW_LEVEL_ID, flowLevelAt: M.FLOW_LEVEL_AT,
+      goalTitle: M.GOAL_TITLE, showingUp: M.SHOWING_UP, constraints: M.CONSTRAINTS,
     };
 
     var cells = [];
@@ -454,6 +461,9 @@ var SubmissionRepo = (function () {
       year: Number(row[S.YEAR]) || 0,
       goalAtSubmission: Number(row[S.GOAL_AT_SUBMISSION]) || DEFAULTS.WEEKLY_GOAL,
       status: String(row[S.STATUS] || SUBMISSION_STATUS.ACTIVE),
+      actionTitle: String(row[S.ACTION_TITLE] || ''),
+      evidence: String(row[S.EVIDENCE] || ''),
+      source: String(row[S.SOURCE] || (row[S.CONTENT_LINK] ? 'legacy-post' : 'action')),
     };
   }
 
@@ -479,6 +489,7 @@ var SubmissionRepo = (function () {
       submission.contentLink, submission.linkKey, submission.dayKey,
       submission.weekStart, submission.weekNumber, submission.month,
       submission.year, submission.goalAtSubmission, SUBMISSION_STATUS.ACTIVE,
+      submission.actionTitle || '', submission.evidence || '', submission.source || 'legacy-post',
     ];
 
     submission.rowIndex = SheetClient.append(SHEETS.SUBMISSIONS, row);

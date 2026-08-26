@@ -447,6 +447,9 @@ var MemberService = (function () {
       currentWeekStreak: member.currentWeekStreak,
       longestWeekStreak: member.longestWeekStreak,
       perfectWeeks: member.perfectWeeks,
+      goalTitle: member.goalTitle || '',
+      showingUp: member.showingUp || '',
+      constraints: member.constraints || '',
     };
   }
 
@@ -472,6 +475,36 @@ var MemberService = (function () {
     MemberRepo.update(member.rowIndex, { consentFeature: Boolean(consent) });
     CacheClient.invalidateMember(member.memberId);
     return { consentFeature: Boolean(consent) };
+  }
+
+  function updateGoal(member, input) {
+    var goalTitle = String(input.goalTitle || '').trim();
+    var showingUp = String(input.showingUp || '').trim();
+    var constraints = String(input.constraints || '').trim();
+    var weeklyGoal = Number(input.weeklyGoal);
+
+    if (goalTitle.length < 3 || goalTitle.length > 120) {
+      throw fail_('VALIDATION_FAILED', 'Describe the goal in a few clear words.', { field: 'goalTitle' });
+    }
+    if (showingUp.length < 3 || showingUp.length > 160) {
+      throw fail_('VALIDATION_FAILED', 'Describe what showing up looks like.', { field: 'showingUp' });
+    }
+    if (constraints.length > 240) {
+      throw fail_('VALIDATION_FAILED', 'Keep constraints under 240 characters.', { field: 'constraints' });
+    }
+    if (WEEKLY_GOALS.indexOf(weeklyGoal) === -1) {
+      throw fail_('VALIDATION_FAILED', 'Choose a realistic weekly rhythm.', { field: 'weeklyGoal' });
+    }
+
+    var patch = {
+      goalTitle: goalTitle,
+      showingUp: showingUp,
+      constraints: constraints,
+      weeklyGoal: weeklyGoal,
+    };
+    MemberRepo.update(member.rowIndex, patch);
+    CacheClient.invalidateMember(member.memberId);
+    return toPublic(Object.assign({}, member, patch));
   }
 
   /**
@@ -515,6 +548,7 @@ var MemberService = (function () {
     requireById: requireById,
     updateFullName: updateFullName,
     updateConsent: updateConsent,
+    updateGoal: updateGoal,
     changePin: changePin,
     applySubmissionCounters: applySubmissionCounters,
   };

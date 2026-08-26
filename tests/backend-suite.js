@@ -135,11 +135,11 @@ import { Icons } from '../src/lib/icons.js';
       'FlowLevelRepo', 'SettingsRepo', 'AuditRepo', 'NotificationRepo', 'CommunityStatsRepo',
       'SettingsService', 'AuditService', 'NotificationService', 'AuthService', 'SessionService',
       'InviteService', 'MemberService', 'ProfileService', 'CalendarService', 'WeeklyStatsService',
-      'LeaderboardService', 'MilestoneService', 'FlowLevelService', 'SubmissionService',
-      'AnalyticsService', 'Pipeline', 'RegistrationFlow', 'LoginFlow', 'SubmissionFlow',
+      'LeaderboardService', 'MilestoneService', 'FlowLevelService', 'SubmissionService', 'ActionService',
+      'FlowAdaptService', 'AnalyticsService', 'Pipeline', 'RegistrationFlow', 'LoginFlow', 'SubmissionFlow',
       'WeekCloseFlow', 'Validate', 'RateLimit', 'Authenticate', 'PinGate', 'Authorize',
       'AuthController', 'MemberController', 'ProfileController', 'SubmissionController',
-      'LeaderboardController', 'AdminController', 'Reconcile',
+      'AdaptationController', 'LeaderboardController', 'AdminController', 'Reconcile',
       'SheetClient', 'CacheClient', 'LockClient', 'Crypto', 'Ids', 'Logger_',
       'FtWeek', 'FtDayMap', 'FtStreak', 'FtLink', 'FtIdentity', 'FtAchievements',
     ].forEach(function (name) {
@@ -1832,6 +1832,134 @@ import { Icons } from '../src/lib/icons.js';
     equal(body.error.message, ERROR_MESSAGES.SERVER_ERROR);
     assert(!body.error.internal, 'internal detail leaked to the client');
     assert(!body.error.stack, 'stack leaked to the client');
+  });
+
+  /* ======================================================================
+     15. Universal Flow — goals, actions and adaptation
+     ====================================================================== */
+
+  describe('Universal Flow');
+
+  it('registration can begin from a meaningful goal without choosing a content platform', function () {
+    var env = freshInstall();
+    var invite = ok('admin.invites.create', { count: 1 }, env.admin.token);
+    var joined = ok('auth.register', {
+      fullName: 'Goal Member', username: 'goal.member', pin: '284617', pinConfirm: '284617',
+      weeklyGoal: 3, inviteCode: invite.codes[0].code, consentFeature: true,
+      goalTitle: 'Launch my neighbourhood bakery',
+      showingUp: 'Complete one launch task',
+      constraints: 'I work full time',
+    });
+
+    equal(joined.member.platform, 'Flow', 'universal registration should use Flow as its neutral context');
+    equal(joined.member.goalTitle, 'Launch my neighbourhood bakery');
+    equal(joined.member.showingUp, 'Complete one launch task');
+    equal(joined.member.constraints, 'I work full time');
+  });
+
+  it('a member can change direction and the new goal survives a fresh profile read', function () {
+    var env = freshInstall();
+    ok('member.updateGoal', {
+      goalTitle: 'Finish my professional portfolio',
+      showingUp: 'Complete one portfolio section',
+      constraints: 'Weeknights are short',
+      weeklyGoal: 4,
+    }, env.member.token);
+
+    CacheClient.reset();
+    var profile = ok('member.profile', {}, env.member.token);
+    equal(profile.member.goalTitle, 'Finish my professional portfolio');
+    equal(profile.member.showingUp, 'Complete one portfolio section');
+    equal(profile.member.constraints, 'Weeknights are short');
+    equal(profile.member.weeklyGoal, 4);
+  });
+
+  it('direction validation refuses a vague or empty goal rather than saving junk', function () {
+    var env = freshInstall();
+    var body = post('member.updateGoal', {
+      goalTitle: 'x', showingUp: 'Do one useful thing', weeklyGoal: 3,
+    }, env.member.token);
+    assert(!body.ok, 'an invalid goal should be refused');
+    equal(body.error.code, 'VALIDATION_FAILED');
+  });
+
+  it('a universal action is written to the existing activity ledger and returned as movement', function () {
+    var env = freshInstall();
+    var created = ok('action.create', {
+      title: 'Outlined the first portfolio case study',
+      evidence: 'Draft saved in my workspace',
+    }, env.member.token);
+
+    assert(created.action.actionId, 'action should have an id');
+    equal(created.action.title, 'Outlined the first portfolio case study');
+    equal(created.stats.actionsThisWeek, 1);
+
+    var history = ok('member.submissions', { page: 1, pageSize: 20 }, env.member.token);
+    equal(history.entries[0].actionTitle, 'Outlined the first portfolio case study');
+    equal(history.entries[0].source, 'action');
+  });
+
+  it('URL evidence is retained as evidence without turning the action back into a content-post workflow', function () {
+    var env = freshInstall();
+    var url = 'https://example.com/proof/portfolio';
+    ok('action.create', { title: 'Published my portfolio draft', evidence: url }, env.member.token);
+    var history = ok('member.submissions', { page: 1, pageSize: 20 }, env.member.token);
+    equal(history.entries[0].evidence, url);
+    equal(history.entries[0].source, 'action');
+    equal(history.entries[0].platform, 'Flow');
+  });
+
+  it('legacy posts and universal actions contribute to one momentum truth', function () {
+    var env = freshInstall();
+    ok('submission.create', { link: 'https://linkedin.com/posts/legacy-flow-1' }, env.member.token);
+    ok('action.create', { title: 'Completed a focused learning session', evidence: '' }, env.member.token);
+    CacheClient.reset();
+    var dash = ok('member.dashboard', {}, env.member.token);
+    equal(dash.week.postsThisWeek, 2, 'mixed activity should count together');
+    equal(dash.stats.allTimePosts, 2, 'lifetime movement should include both activity types');
+  });
+
+  it('universal actions feed the existing calendar and recovery machinery', function () {
+    var env = freshInstall();
+    ok('action.create', { title: 'Took the next useful step', evidence: '' }, env.member.token);
+    var calendar = ok('member.calendar', { weeks: 12 }, env.member.token);
+    assert(calendar.activeDays >= 1, 'the action should create an active day');
+    assert(Object.keys(calendar.counts).some(function (key) { return calendar.counts[key] >= 1; }),
+      'the action should appear in the movement calendar');
+  });
+
+  it('Flow Adapt recognises a power constraint and preserves the member destination', function () {
+    var env = freshInstall();
+    ok('member.updateGoal', {
+      goalTitle: 'Build my UX portfolio', showingUp: 'Design one portfolio section', weeklyGoal: 3,
+    }, env.member.token);
+    var proposed = ok('adaptation.propose', {
+      constraint: 'There is no power and my laptop battery is dead',
+    }, env.member.token).proposal;
+    equal(proposed.category, 'power');
+    equal(proposed.preservedGoal, 'Build my UX portfolio');
+    assert(/phone|offline/i.test(proposed.today), 'the adapted today step should fit the constraint');
+  });
+
+  it('an adapted path only becomes accepted through an explicit acceptance action', function () {
+    var env = freshInstall();
+    var proposal = ok('adaptation.propose', {
+      constraint: 'Work has become unexpectedly busy this week',
+    }, env.member.token).proposal;
+    var accepted = ok('adaptation.accept', {
+      proposalId: proposal.proposalId,
+      category: proposal.category,
+      today: proposal.today,
+    }, env.member.token);
+    equal(accepted.accepted, true);
+    equal(accepted.proposalId, proposal.proposalId);
+  });
+
+  it('Flow Adapt refuses empty circumstance reports instead of inventing a problem', function () {
+    var env = freshInstall();
+    var body = post('adaptation.propose', { constraint: 'x' }, env.member.token);
+    assert(!body.ok, 'a meaningless constraint should be refused');
+    equal(body.error.code, 'VALIDATION_FAILED');
   });
 
   /* ======================================================================

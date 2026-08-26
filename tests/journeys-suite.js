@@ -231,6 +231,8 @@ const ROUTES = {
   '/change-pin': () => import('../src/features/auth/change-pin-view.js').then((m) => m.default),
   '/dashboard': () => import('../src/features/dashboard/dashboard-view.js').then((m) => m.default),
   '/submit': () => import('../src/features/submit/submit-view.js').then((m) => m.default),
+  '/adapt': () => import('../src/features/adapt/adapt-view.js').then((m) => m.default),
+  '/direction': () => import('../src/features/direction/direction-view.js').then((m) => m.default),
   '/leaderboard': () => import('../src/features/leaderboard/leaderboard-view.js').then((m) => m.default),
   '/milestones': () => import('../src/features/milestones/milestones-view.js').then((m) => m.default),
   '/levels': () => import('../src/features/levels/levels-view.js').then((m) => m.default),
@@ -338,8 +340,11 @@ async function signedInMember(world, overrides = {}) {
     username: 'amaka',
     pin: '284617',
     pinConfirm: '284617',
-    platform: 'LinkedIn',
+    platform: 'Flow',
     weeklyGoal: 3,
+    goalTitle: 'Build my professional portfolio',
+    showingUp: 'Complete one meaningful portfolio task',
+    constraints: 'I work full time',
     inviteCode: world.codes.pop(),
     consentFeature: true,
     ...overrides,
@@ -380,14 +385,16 @@ async function run() {
     typePin(pinGroups[0], '284617');
     typePin(pinGroups[1], '284617');
     button('Continue').click();
-    await waitFor(() => $('input[name="platform"]') !== null, 'step 2 to render');
+    await waitFor(() => {
+      try { return Boolean(byLabel('What are you moving toward?')); } catch { return false; }
+    }, 'direction step to render');
 
-    // Step 2 — what you are committing to.
-    const linkedin = $all('input[name="platform"]').find((n) => /linkedin/i.test(n.value));
-    assert(linkedin, 'LinkedIn should be offered as a platform');
-    linkedin.click();
+    // Step 2 — the destination, definition of showing up, and realistic rhythm.
+    type(byLabel('What are you moving toward?'), 'Build my professional portfolio');
+    type(byLabel('What does showing up look like?'), 'Complete one meaningful portfolio task');
+    type(byLabel('Anything Flow should plan around?'), 'I work full time');
     const goal = $all('input[name="weeklyGoal"]').find((n) => n.value === '3');
-    assert(goal, 'a 3-post weekly goal should be offered');
+    assert(goal, 'a three-times weekly rhythm should be offered');
     goal.click();
     button('Continue').click();
     await waitFor(() => {
@@ -396,7 +403,7 @@ async function run() {
 
     // Step 3 — the invite.
     type(byLabel('Your invite code'), world.codes.pop());
-    button('Create my account').click();
+    button('Start my Flow').click();
 
     await waitFor(() => visited.includes('/welcome'), 'registration to reach the welcome screen');
     assertLoaded("the welcome screen");
@@ -456,50 +463,88 @@ async function run() {
     assert(text().includes('Amaka'), 'restored session lost the member');
   });
 
-  /* ---- Submission ------------------------------------------------------ */
+  /* ---- Showing up ------------------------------------------------------ */
 
-  group('SUBMISSION');
+  group('SHOWING UP');
 
-  await it('logging a post shows the success screen with the week ring — not a network error', async () => {
+  await it('logging a meaningful action shows momentum — not a network error', async () => {
     const world = freshWorld();
     await signedInMember(world);
 
     await go('/submit');
-    type(byLabel('Paste your content link'), 'https://linkedin.com/posts/journey-1');
-    button('Log this post').click();
+    type(byLabel('How did you show up?'), 'Outlined the first portfolio case study');
+    type(byLabel('Evidence or note'), 'Draft saved in my workspace');
+    button('Count this action').click();
     await settle(90);
 
     const shown = text();
-    assert(/Nice work/i.test(shown), `expected the success state, got: ${shown.slice(0, 200)}`);
+    assert(/You moved/i.test(shown), `expected the success state, got: ${shown.slice(0, 200)}`);
     assert(!/couldn.t reach|check your connection/i.test(shown),
-      'a successful post reported a network failure — defect B1 has regressed');
-    assertLoaded("the submit success screen");
+      'a successful action reported a network failure');
+    assert(/1 of 3 meaningful actions/i.test(shown), `expected the momentum ring copy, got: ${shown.slice(0, 200)}`);
+    assertLoaded('the action success screen');
   });
 
-  await it('a duplicate link is refused on the form, and the first post still stands', async () => {
-    const world = freshWorld();
-    await signedInMember(world);
-
-    post('submission.create', { link: 'https://linkedin.com/posts/dupe' }, token());
-
-    await go('/submit');
-    type(byLabel('Paste your content link'), 'https://linkedin.com/posts/dupe');
-    button('Log this post').click();
-    await settle(90);
-
-    assert(/already logged/i.test(text()), `expected the duplicate message, got: ${text().slice(0, 200)}`);
-  });
-
-  await it('a link from the wrong platform names the member’s own platform', async () => {
+  await it('an action with optional URL evidence remains universal Flow activity', async () => {
     const world = freshWorld();
     await signedInMember(world);
 
     await go('/submit');
-    type(byLabel('Paste your content link'), 'https://instagram.com/p/abc');
-    button('Log this post').click();
+    type(byLabel('How did you show up?'), 'Published a portfolio draft');
+    type(byLabel('Evidence or note'), 'https://example.com/proof/portfolio');
+    button('Count this action').click();
     await settle(90);
+    assert(/You moved/i.test(text()), `expected success, got: ${text().slice(0, 200)}`);
 
-    assert(/LinkedIn/.test(text()), `the refusal should name LinkedIn, got: ${text().slice(0, 200)}`);
+    const history = post('member.submissions', { page: 1, pageSize: 10 }, token());
+    assert(history.ok, 'movement history should load');
+    equal(history.data.entries[0].source, 'action');
+    equal(history.data.entries[0].platform, 'Flow');
+  });
+
+  await it('an empty action is refused in place with a useful prompt', async () => {
+    const world = freshWorld();
+    await signedInMember(world);
+
+    await go('/submit');
+    button('Count this action').click();
+    await settle(30);
+
+    equal(currentRoute, '/submit', 'invalid movement must stay on the form');
+    assert(/Say what you did/i.test(text()), `expected action guidance, got: ${text().slice(0, 200)}`);
+  });
+
+  /* ---- Flow Adapt ------------------------------------------------------ */
+
+  group('FLOW ADAPT');
+
+  await it('a real-life constraint produces an adapted path while preserving the goal', async () => {
+    const world = freshWorld();
+    await signedInMember(world);
+
+    await go('/adapt');
+    type(byLabel('What changed?'), 'There is no power and my laptop battery is dead');
+    button('Adapt my path').click();
+    await waitFor(() => /GOAL PRESERVED/.test(text()), 'Flow Adapt to produce a path');
+
+    assertLoaded('the adapted path');
+    assert(text().includes('Build my professional portfolio'), 'Flow Adapt must preserve the destination');
+    assert(/offline|phone/i.test(text()), `power adaptation should fit the constraint: ${text().slice(0, 240)}`);
+  });
+
+  await it('the adapted path is not accepted until the member explicitly chooses it', async () => {
+    const world = freshWorld();
+    await signedInMember(world);
+
+    await go('/adapt');
+    type(byLabel('What changed?'), 'Work has become unexpectedly busy this week');
+    button('Adapt my path').click();
+    await waitFor(() => $all('button').some((node) => /Use this path/.test(node.textContent)), 'approval control');
+    button('Use this path').click();
+    await waitFor(() => /You are back in Flow/i.test(text()), 'the accepted recovery state');
+
+    assertLoaded('the accepted adapted path');
+    assert(/next move is small on purpose/i.test(text()), 'accepted state should make recovery explicit');
   });
 
   /* ---- The rest of the member app -------------------------------------- */
@@ -515,8 +560,7 @@ async function run() {
     await it(`${path} renders against real data without throwing or leaking undefined`, async () => {
       const world = freshWorld();
       await signedInMember(world);
-      post('submission.create', { link: 'https://linkedin.com/posts/x' },
-        token());
+      post('action.create', { title: 'Completed a useful step', evidence: '' }, token());
 
       await go(path);
       assertLoaded(path);
@@ -594,14 +638,14 @@ async function run() {
 
   group('EMPTY STATES');
 
-  await it('a member with no posts sees encouragement, never a zero-rank or a blank screen', async () => {
+  await it('a member with no actions sees encouragement, never a zero-rank or a blank screen', async () => {
     const world = freshWorld();
     await signedInMember(world);
 
     await go('/dashboard');
     const dashboard = text();
     assertLoaded("the empty dashboard");
-    assert(!/#0\b|rank 0/i.test(dashboard), 'a member with no posts must not be shown a rank');
+    assert(!/#0\b|rank 0/i.test(dashboard), 'a member with no actions must not be shown a rank');
 
     await go('/leaderboard');
     assertLoaded("the empty leaderboard");

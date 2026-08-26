@@ -51,6 +51,7 @@ var M = Object.freeze({
   ALL_TIME_POSTS: 17, CURRENT_WEEK_STREAK: 18, LONGEST_WEEK_STREAK: 19,
   PERFECT_WEEKS: 20, LAST_SUBMISSION_DATE: 21,
   FLOW_LEVEL_ID: 22, FLOW_LEVEL_AT: 23, UPDATED_AT: 24,
+  GOAL_TITLE: 25, SHOWING_UP: 26, CONSTRAINTS: 27,
 });
 
 var MEMBERS_HEADERS = [
@@ -59,7 +60,7 @@ var MEMBERS_HEADERS = [
   'ConsentFeature', 'MustChangePin', 'ProfileComplete', 'InviteCodeUsed',
   'FailedLoginCount', 'NextAttemptAt', 'AllTimePosts', 'CurrentWeekStreak',
   'LongestWeekStreak', 'PerfectWeeks', 'LastSubmissionDate', 'FlowLevelID',
-  'FlowLevelAchievedAt', 'UpdatedAt',
+  'FlowLevelAchievedAt', 'UpdatedAt', 'GoalTitle', 'ShowingUp', 'Constraints',
 ];
 
 var P = Object.freeze({ MEMBER_ID: 0, WHATSAPP: 1, EMAIL: 2, BIO: 3, UPDATED_AT: 4 });
@@ -85,11 +86,12 @@ var S = Object.freeze({
   SUBMISSION_ID: 0, TIMESTAMP: 1, MEMBER_ID: 2, NAME: 3, USERNAME: 4,
   PLATFORM: 5, CONTENT_LINK: 6, LINK_KEY: 7, DAY_KEY: 8, WEEK_START: 9,
   WEEK_NUMBER: 10, MONTH: 11, YEAR: 12, GOAL_AT_SUBMISSION: 13, STATUS: 14,
+  ACTION_TITLE: 15, EVIDENCE: 16, SOURCE: 17,
 });
 var SUBMISSIONS_HEADERS = [
   'SubmissionID', 'Timestamp', 'MemberID', 'Name', 'Username', 'Platform',
   'ContentLink', 'LinkKey', 'DayKey', 'WeekStart', 'WeekNumber', 'Month',
-  'Year', 'GoalAtSubmission', 'Status',
+  'Year', 'GoalAtSubmission', 'Status', 'ActionTitle', 'Evidence', 'Source',
 ];
 
 var AC = Object.freeze({
@@ -192,7 +194,7 @@ var SUBMISSION_STATUS = Object.freeze({ ACTIVE: 'Active', VOIDED: 'Voided' });
 var INVITE_STATUS = Object.freeze({
   UNUSED: 'Unused', USED: 'Used', REVOKED: 'Revoked', EXPIRED: 'Expired',
 });
-var PLATFORMS = Object.freeze(['LinkedIn', 'X', 'Instagram', 'TikTok', 'YouTube']);
+var PLATFORMS = Object.freeze(['Flow', 'LinkedIn', 'X', 'Instagram', 'TikTok', 'YouTube']);
 var WEEKLY_GOALS = Object.freeze([3, 5, 7]);
 
 /**

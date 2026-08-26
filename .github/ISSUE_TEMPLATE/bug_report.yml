@@ -1,0 +1,47 @@
+name: Defect report
+description: Record a reproducible Flow Tribe defect with evidence.
+title: "[Bug] "
+labels: ["bug"]
+body:
+  - type: textarea
+    id: observed
+    attributes:
+      label: Observed behaviour
+      description: What happened, on which screen/action, and for which role?
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behaviour
+    validations:
+      required: true
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: Reproduction steps
+      description: Include the smallest reliable sequence.
+    validations:
+      required: true
+  - type: dropdown
+    id: evidence
+    attributes:
+      label: Evidence status
+      options:
+        - VERIFIED — reproduced directly
+        - ASSUMED — reported but not reproduced
+        - BLOCKED — reproduction dependency unavailable
+    validations:
+      required: true
+  - type: textarea
+    id: environment
+    attributes:
+      label: Environment and evidence
+      description: Local/staging/production, browser/device, logs, screenshots, commit/deployment ID if known.
+  - type: checkboxes
+    id: scope
+    attributes:
+      label: Scope protection
+      options:
+        - label: I have not proposed unrelated redesign or feature work as part of this defect.
+          required: true
