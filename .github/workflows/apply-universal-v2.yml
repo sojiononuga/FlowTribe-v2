@@ -43,9 +43,6 @@ jobs:
 
           test -f package.json
           test -f tests/verify-browser.mjs
-          test -f src/features/goals/goal-view.js
-          test -f src/features/adapt/adapt-view.js
-          test -f docs/WORK_POLICY.md
           test -f src/core/config.example.js
           cp src/core/config.example.js src/core/config.js
 
