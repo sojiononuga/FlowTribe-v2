@@ -46,6 +46,15 @@ jobs:
           test -f src/core/config.example.js
           cp src/core/config.example.js src/core/config.js
 
+      - name: Diagnose product contracts
+        run: |
+          echo '=== Founding Member ==='
+          grep -R -n -C 4 "Founding Member" appsscript src tests || true
+          echo '=== submission.create ==='
+          grep -R -n -C 4 "submission.create" appsscript src tests || true
+          echo '=== updateGoal / realistic weekly rhythm ==='
+          grep -R -n -C 6 -E "updateGoal|realistic weekly rhythm" appsscript src tests || true
+
       - name: Verify JavaScript syntax
         run: |
           find src tests -type f \( -name '*.js' -o -name '*.mjs' \) -print0 | xargs -0 -n1 node --check
