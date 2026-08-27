@@ -254,7 +254,7 @@ export function LevelTrack(props) {
             level.requiredPosts > 0
               ? el('p', {
                   class: 'ft-level-step__requirement',
-                  text: `${level.requiredPosts} posts · ${level.requiredPerfectWeeks} goal weeks`,
+                  text: `${level.requiredPosts} actions · ${level.requiredPerfectWeeks} goal weeks`,
                 })
               : el('p', { class: 'ft-level-step__requirement', text: 'Where everyone begins' }),
           ]),
@@ -300,7 +300,7 @@ export function LevelProgress(props) {
   // A target of 0 is already satisfied; an empty bar beside it reads as
   // failure rather than as "nothing required here".
   const rows = [
-    { label: 'Posts', value: postsNow, max: next.requiredPosts || 0 },
+    { label: 'Actions', value: postsNow, max: next.requiredPosts || 0 },
     { label: 'Goal weeks', value: weeksNow, max: next.requiredPerfectWeeks || 0 },
   ].filter((row) => row.max > 0);
 
