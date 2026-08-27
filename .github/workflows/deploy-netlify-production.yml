@@ -7,7 +7,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   deploy:
@@ -33,7 +33,8 @@ jobs:
             --exclude='scripts' \
             --exclude='appsscript' \
             --exclude='.clasp.json*' \
-            --exclude='.claude'
+            --exclude='.claude' \
+            --exclude='.netlify-site-id'
           cat > deploy/src/core/config.js <<'EOF'
           export const config = {
             version: '2.0.0',
@@ -59,21 +60,49 @@ jobs:
           EOF
           rm -f deploy/gallery.html
 
-      - name: Check Netlify credentials
+      - name: Check Netlify authentication
         shell: bash
         env:
           NETLIFY_AUTH_TOKEN: ${{ secrets.NETLIFY_AUTH_TOKEN }}
-          NETLIFY_SITE_ID: ${{ secrets.NETLIFY_SITE_ID }}
         run: |
           set -euo pipefail
           test -n "$NETLIFY_AUTH_TOKEN" || { echo 'NETLIFY_AUTH_TOKEN is not configured'; exit 20; }
-          test -n "$NETLIFY_SITE_ID" || { echo 'NETLIFY_SITE_ID is not configured'; exit 21; }
+
+      - name: Resolve or create Netlify site
+        id: site
+        shell: bash
+        env:
+          NETLIFY_AUTH_TOKEN: ${{ secrets.NETLIFY_AUTH_TOKEN }}
+        run: |
+          set -euo pipefail
+          if [ -s .netlify-site-id ]; then
+            SITE_ID="$(tr -d '\r\n ' < .netlify-site-id)"
+            SITE_JSON="$(curl -fsS -H "Authorization: Bearer $NETLIFY_AUTH_TOKEN" "https://api.netlify.com/api/v1/sites/$SITE_ID")"
+          else
+            SITE_JSON="$(curl -fsS -X POST \
+              -H "Authorization: Bearer $NETLIFY_AUTH_TOKEN" \
+              -H 'Content-Type: application/json' \
+              -d '{}' \
+              'https://api.netlify.com/api/v1/sites')"
+            SITE_ID="$(printf '%s' "$SITE_JSON" | jq -r '.id')"
+            test -n "$SITE_ID" && test "$SITE_ID" != null
+            printf '%s\n' "$SITE_ID" > .netlify-site-id
+            git config user.name github-actions[bot]
+            git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+            git add .netlify-site-id
+            git commit -m 'ops: record Flow Tribe Netlify site id'
+            git push origin HEAD:main
+          fi
+          SITE_URL="$(printf '%s' "$SITE_JSON" | jq -r '.ssl_url // .url')"
+          echo "site_id=$SITE_ID" >> "$GITHUB_OUTPUT"
+          echo "site_url=$SITE_URL" >> "$GITHUB_OUTPUT"
+          echo "Netlify site: $SITE_URL"
 
       - name: Deploy to Netlify production
         shell: bash
         env:
           NETLIFY_AUTH_TOKEN: ${{ secrets.NETLIFY_AUTH_TOKEN }}
-          NETLIFY_SITE_ID: ${{ secrets.NETLIFY_SITE_ID }}
+          NETLIFY_SITE_ID: ${{ steps.site.outputs.site_id }}
         run: |
           set -euo pipefail
           npx --yes netlify-cli@23.11.0 deploy \
@@ -86,4 +115,6 @@ jobs:
 
       - name: Show deployment result
         shell: bash
-        run: cat netlify-deploy.json
+        run: |
+          cat netlify-deploy.json
+          echo "Production site: ${{ steps.site.outputs.site_url }}"
