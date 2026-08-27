@@ -50,7 +50,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          cat > /tmp/live-check.mjs <<'EOF'
+          cat > live-check.mjs <<'EOF'
           import { chromium } from 'playwright';
 
           const site = process.env.SITE_URL;
@@ -75,6 +75,4 @@ jobs:
           await browser.close();
           console.log('LIVE MEMBER + ADMIN ENTRY SCREENS PASSED');
           EOF
-          node /tmp/live-check.mjs
-
-# retrigger after Netlify public visibility
+          node live-check.mjs
