@@ -1,0 +1,78 @@
+name: live production verify
+
+on:
+  push:
+    paths:
+      - '.github/workflows/live-production-verify.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  verify-live:
+    runs-on: ubuntu-latest
+    env:
+      SITE_URL: https://dainty-frangollo-1063b3.netlify.app
+      API_URL: https://script.google.com/macros/s/AKfycbwWWVFp0K9oJKkZsnOackCSCmeAUPxZLRANX9v1YN0Dl-Y3VdTg_4Qp5_s-arhYZuOB/exec
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Verify live HTTP surfaces
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl -fsSL --retry 5 --retry-delay 2 "$SITE_URL/" -o /tmp/member.html
+          curl -fsSL --retry 5 --retry-delay 2 "$SITE_URL/admin.html" -o /tmp/admin.html
+          curl -fsSL --retry 5 --retry-delay 2 "$SITE_URL/src/core/config.js" -o /tmp/config.js
+          grep -q '<title>Flow Tribe</title>' /tmp/member.html
+          grep -q '<title>Flow Tribe · Admin</title>' /tmp/admin.html
+          grep -qF "$API_URL" /tmp/config.js
+
+          HEALTH="$(curl -fsSL --retry 5 --retry-delay 2 "$API_URL")"
+          printf '%s\n' "$HEALTH"
+          printf '%s' "$HEALTH" | grep -q '2.0.0'
+
+          USERNAME="livecheck$(date +%s)"
+          BODY="$(jq -nc --arg u "$USERNAME" '{action:"auth.checkUsername",payload:{username:$u},requestId:("live-"+$u),clientVersion:"2.0.0"}')"
+          RESPONSE="$(curl -fsSL --retry 5 --retry-delay 2 -H 'Content-Type: text/plain;charset=utf-8' --data "$BODY" "$API_URL")"
+          printf '%s\n' "$RESPONSE"
+          printf '%s' "$RESPONSE" | jq -e '.ok == true and (.data.available | type == "boolean")' >/dev/null
+
+      - name: Install Chromium verification runtime
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm install --no-save playwright@1.55.0
+          npx playwright install --with-deps chromium
+
+      - name: Verify real member and admin screens
+        shell: bash
+        run: |
+          set -euo pipefail
+          cat > /tmp/live-check.mjs <<'EOF'
+          import { chromium } from 'playwright';
+
+          const site = process.env.SITE_URL;
+          const browser = await chromium.launch({ headless: true });
+          const page = await browser.newPage({ viewport: { width: 390, height: 844 } });
+          const errors = [];
+          page.on('pageerror', (e) => errors.push(`pageerror: ${e.message}`));
+          page.on('console', (m) => { if (m.type() === 'error') errors.push(`console: ${m.text()}`); });
+
+          await page.goto(`${site}/#/login`, { waitUntil: 'networkidle', timeout: 30000 });
+          await page.getByText('Welcome back', { exact: true }).waitFor({ timeout: 15000 });
+          await page.getByRole('button', { name: 'Log in' }).waitFor({ timeout: 15000 });
+          if ((await page.title()) !== 'Flow Tribe') throw new Error(`member title: ${await page.title()}`);
+
+          await page.goto(`${site}/admin.html`, { waitUntil: 'networkidle', timeout: 30000 });
+          if ((await page.title()) !== 'Flow Tribe · Admin') throw new Error(`admin title: ${await page.title()}`);
+          await page.locator('#app').waitFor({ timeout: 15000 });
+          const adminText = (await page.locator('#app').innerText()).trim();
+          if (!adminText) throw new Error('admin shell rendered no content');
+
+          if (errors.length) throw new Error(errors.join('\n'));
+          await browser.close();
+          console.log('LIVE MEMBER + ADMIN ENTRY SCREENS PASSED');
+          EOF
+          node /tmp/live-check.mjs
