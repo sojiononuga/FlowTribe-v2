@@ -4,6 +4,8 @@ on:
   push:
     paths:
       - '.github/workflows/package-apps-script.yml'
+      - 'appsscript/**'
+  workflow_dispatch:
 
 permissions:
   contents: write
@@ -41,6 +43,7 @@ jobs:
             appsscript/controllers/Controllers.gs
             appsscript/jobs/Jobs.gs
             appsscript/setup/Setup.gs
+            appsscript/setup/OperatorRecovery.gs
             appsscript/setup/SmokeTest.gs
           )
           for f in "${files[@]}"; do
