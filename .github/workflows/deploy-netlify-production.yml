@@ -1,0 +1,89 @@
+name: deploy production frontend to Netlify
+
+on:
+  push:
+    paths:
+      - '.github/workflows/deploy-netlify-production.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+
+      - name: Prepare production frontend
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -rf deploy
+          mkdir deploy
+          rsync -a ./ deploy/ \
+            --exclude='.git' \
+            --exclude='.github' \
+            --exclude='deploy' \
+            --exclude='tests' \
+            --exclude='docs' \
+            --exclude='dist' \
+            --exclude='scripts' \
+            --exclude='appsscript' \
+            --exclude='.clasp.json*' \
+            --exclude='.claude'
+          cat > deploy/src/core/config.js <<'EOF'
+          export const config = {
+            version: '2.0.0',
+            api: {
+              baseUrl: 'https://script.google.com/macros/s/AKfycbwWWVFp0K9oJKkZsnOackCSCmeAUPxZLRANX9v1YN0Dl-Y3VdTg_4Qp5_s-arhYZuOB/exec',
+              timeoutMs: 20000,
+            },
+            app: {
+              name: 'Flow Tribe',
+              memberEntry: 'index.html',
+              adminEntry: 'admin.html',
+              timezone: 'Africa/Lagos',
+            },
+            rules: {
+              pinLength: 6,
+              usernameMinLength: 3,
+              usernameMaxLength: 20,
+              bioMaxLength: 160,
+            },
+            debug: false,
+          };
+          export default config;
+          EOF
+          rm -f deploy/gallery.html
+
+      - name: Check Netlify credentials
+        shell: bash
+        env:
+          NETLIFY_AUTH_TOKEN: ${{ secrets.NETLIFY_AUTH_TOKEN }}
+          NETLIFY_SITE_ID: ${{ secrets.NETLIFY_SITE_ID }}
+        run: |
+          set -euo pipefail
+          test -n "$NETLIFY_AUTH_TOKEN" || { echo 'NETLIFY_AUTH_TOKEN is not configured'; exit 20; }
+          test -n "$NETLIFY_SITE_ID" || { echo 'NETLIFY_SITE_ID is not configured'; exit 21; }
+
+      - name: Deploy to Netlify production
+        shell: bash
+        env:
+          NETLIFY_AUTH_TOKEN: ${{ secrets.NETLIFY_AUTH_TOKEN }}
+          NETLIFY_SITE_ID: ${{ secrets.NETLIFY_SITE_ID }}
+        run: |
+          set -euo pipefail
+          npx --yes netlify-cli@23.11.0 deploy \
+            --prod \
+            --dir deploy \
+            --site "$NETLIFY_SITE_ID" \
+            --auth "$NETLIFY_AUTH_TOKEN" \
+            --message "Flow Tribe v2 production $GITHUB_SHA" \
+            --json | tee netlify-deploy.json
+
+      - name: Show deployment result
+        shell: bash
+        run: cat netlify-deploy.json
