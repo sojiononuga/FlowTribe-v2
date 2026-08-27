@@ -1,0 +1,25 @@
+name: netlify visibility diagnostic
+
+on:
+  push:
+    paths:
+      - '.github/workflows/netlify-visibility-diagnostic.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Inspect Netlify site visibility fields
+        shell: bash
+        env:
+          NETLIFY_AUTH_TOKEN: ${{ secrets.NETLIFY_AUTH_TOKEN }}
+        run: |
+          set -euo pipefail
+          SITE_ID="$(tr -d '\r\n ' < .netlify-site-id)"
+          curl -fsS -H "Authorization: Bearer $NETLIFY_AUTH_TOKEN" "https://api.netlify.com/api/v1/sites/$SITE_ID" \
+            | jq 'with_entries(select(.key|test("visibility|private|password|access|protection|locked";"i")))'
