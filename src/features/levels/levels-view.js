@@ -17,6 +17,7 @@ import { PageHeader, Section } from '../../components/layout/index.js';
 import { Icons } from '../../lib/icons.js';
 import { call } from '../../core/api.js';
 import { toAppError } from '../../core/errors.js';
+import { presentLevel } from '../../lib/catalog.js';
 
 export default function LevelsView() {
   const root = el('div', { class: 'ft-animate-in' });
@@ -42,7 +43,9 @@ export default function LevelsView() {
 }
 
 function render(data) {
-  const { levels, current, stats } = data;
+  const stats = data.stats;
+  const levels = data.levels.map(presentLevel);
+  const current = { ...presentLevel(data.current), next: presentLevel(data.current.next) };
 
   return el('div', { class: 'ft-stack ft-gap-6' }, [
     PageHeader({

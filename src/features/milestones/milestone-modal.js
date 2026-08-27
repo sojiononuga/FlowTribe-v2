@@ -22,6 +22,7 @@ import { Button, openModal } from '../../components/ui/index.js';
 import { MilestoneBadge, ProgressBar } from '../../components/brand/milestone.js';
 import { SuccessBurst } from '../../components/brand/success-burst.js';
 import { date } from '../../lib/format.js';
+import { presentLevel, presentMilestone } from '../../lib/catalog.js';
 
 const RARITY_LABEL = {
   Common: 'Common',
@@ -36,6 +37,7 @@ const RARITY_LABEL = {
  * @param {Object} milestone
  */
 export function openMilestoneModal(milestone) {
+  milestone = presentMilestone(milestone);
   const { name, description, iconId, rarity, unlocked, progress, target, unlockedAt } = milestone;
 
   const content = el('div', { class: 'ft-milestone-detail' }, [
@@ -75,6 +77,7 @@ export function openMilestoneModal(milestone) {
  */
 export function openCelebrationModal(milestone) {
   return new Promise((resolve) => {
+    milestone = presentMilestone(milestone);
     const content = el('div', { class: 'ft-celebration' }, [
       el('div', { class: 'ft-celebration__burst' }, SuccessBurst({ label: 'Milestone unlocked' })),
       el('div', { class: 'ft-celebration__medal' }, MilestoneBadge({
@@ -125,6 +128,7 @@ export async function celebrateAll(milestones) {
  */
 export function openLevelUpModal(level) {
   return new Promise((resolve) => {
+    level = presentLevel(level);
     const content = el('div', { class: 'ft-celebration' }, [
       el('div', { class: 'ft-celebration__burst' }, SuccessBurst({ label: 'New Flow Level' })),
       el('div', { class: 'ft-celebration__medal' }, MilestoneBadge({

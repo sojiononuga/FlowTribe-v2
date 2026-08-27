@@ -11,6 +11,7 @@ import { call } from '../../core/api.js';
 import { toAppError } from '../../core/errors.js';
 import { navigate } from '../../app/navigation.js';
 import { openMilestoneModal } from '../milestones/milestone-modal.js';
+import { presentLevel, presentMilestone } from '../../lib/catalog.js';
 
 export default function DashboardView() {
   const root = el('div', { class: 'ft-dashboard' });
@@ -25,7 +26,13 @@ export default function DashboardView() {
 }
 
 function render(data) {
-  const { member, level, week, calendar, milestones, stats, leaderboard, recent } = data;
+  const { member, week, calendar, stats, leaderboard, recent } = data;
+  const level = presentLevel(data.level);
+  const milestones = {
+    ...data.milestones,
+    next: presentMilestone(data.milestones.next),
+    recent: data.milestones.recent.map(presentMilestone),
+  };
   const actions = week.postsThisWeek;
   const score = momentumScore(actions, week.weeklyGoal, stats.currentWeekStreak);
 
@@ -41,42 +48,51 @@ function render(data) {
       ]),
     ]),
 
-    /* Direction */
-    Card({}, [
-      el('div', { class: 'ft-row ft-row--between ft-mb-3' }, [
-        el('span', { class: 'ft-pagehead__eyebrow', text: 'DIRECTION' }),
-        el('a', { class: 'ft-section__action', attrs: { href: '#/direction' }, text: 'Edit' }),
+    /* The first viewport tells the whole product story: destination, route,
+       one useful move, and the promise that the route can change. */
+    Card({ variant: 'brand' }, [
+      el('div', { class: 'ft-flow-hero' }, [
+        el('div', { class: 'ft-flow-hero__copy' }, [
+          el('div', { class: 'ft-row ft-row--between ft-gap-3' }, [
+            el('span', { class: 'ft-flow-hero__eyebrow', text: 'YOUR GOAL' }),
+            el('a', { class: 'ft-flow-hero__edit', attrs: { href: '#/direction' }, text: 'Edit direction' }),
+          ]),
+          el('h2', { class: 'ft-flow-hero__title', text: member.goalTitle || 'Choose a meaningful direction' }),
+          el('p', {
+            class: 'ft-flow-hero__promise',
+            text: 'When life changes the plan, Flow changes the path — not the goal.',
+          }),
+        ]),
+        el('div', { class: 'ft-flow-hero__score', attrs: { 'aria-label': `Momentum ${score} out of 100` } }, [
+          el('span', { class: 'ft-flow-hero__score-value', text: String(score) }),
+          el('span', { class: 'ft-flow-hero__score-label', text: 'momentum' }),
+        ]),
       ]),
-      el('h2', { class: 'ft-pagehead__title', text: member.goalTitle || 'Choose a meaningful direction' }),
-      el('p', {
-        class: 'ft-text-sm ft-text-muted ft-mt-3',
-        text: member.showingUp ? `Showing up means: ${member.showingUp}` : 'Define what meaningful progress looks like for you.',
-      }),
-      member.constraints ? el('p', { class: 'ft-text-xs ft-text-muted ft-mt-3', text: `Planning around: ${member.constraints}` }) : null,
     ]),
 
-    /* Momentum */
     Card({}, [
-      el('div', { class: 'ft-row ft-row--between' }, [
+      el('div', { class: 'ft-row ft-row--between ft-gap-3' }, [
         el('div', {}, [
-          el('p', { class: 'ft-pagehead__eyebrow', text: 'MOMENTUM' }),
-          el('div', { class: 'ft-row ft-gap-3 ft-mt-2' }, [
-            el('span', { class: 'ft-numeral', text: String(score) }),
-            el('span', { class: 'ft-text-sm ft-text-muted', text: '/ 100' }),
-          ]),
+          el('p', { class: 'ft-pagehead__eyebrow', text: 'YOUR PLAN' }),
+          el('h2', { class: 'ft-section__title ft-mt-2', text: `${week.weeklyGoal} meaningful moves this week` }),
         ]),
         ProgressRing({ value: actions, goal: week.weeklyGoal }),
       ]),
-      el('p', {
-        class: 'ft-week-panel__message ft-mt-4',
-        text: week.goalMet
-          ? 'You hit your weekly rhythm. Keep the quality of the movement, not the pressure.'
-          : `${actions} of ${week.weeklyGoal} meaningful actions this week. A missed day does not erase the week.`,
-      }),
-      el('div', { class: 'ft-grid ft-grid--2 ft-mt-4' }, [
-        Button({ label: 'Show up', size: 'lg', block: true, iconPaths: Icons.plus, onClick: () => navigate('/submit') }),
-        Button({ label: 'Something changed', variant: 'secondary', size: 'lg', block: true, iconPaths: Icons.refresh, onClick: () => navigate('/adapt') }),
+      el('ol', { class: 'ft-flow-plan ft-mt-5' }, [
+        PlanStep('1', 'Next action', member.showingUp || 'Complete one meaningful action', actions === 0 ? 'Now' : 'Continue'),
+        PlanStep('2', 'Evidence', 'Record what happened without over-documenting it', `${actions} saved`),
+        PlanStep('3', 'Progress', week.goalMet ? 'Weekly rhythm reached' : `${week.weeklyGoal - actions} moves remain at this pace`, `${score}%`),
       ]),
+      el('div', { class: 'ft-grid ft-grid--2 ft-mt-5' }, [
+        Button({ label: 'Do the next action', size: 'lg', block: true, iconPaths: Icons.plus, onClick: () => navigate('/submit') }),
+        Button({ label: 'Adapt the path', variant: 'secondary', size: 'lg', block: true, iconPaths: Icons.refresh, onClick: () => navigate('/adapt') }),
+      ]),
+      member.constraints ? el('div', { class: 'ft-constraint ft-mt-5' }, [
+        el('div', {}, [
+          el('span', { class: 'ft-constraint__label', text: 'Flow is planning around' }),
+          el('p', { class: 'ft-constraint__text', text: member.constraints }),
+        ]),
+      ]) : null,
     ]),
 
     Section({ title: 'Your movement' }, Card({}, [
@@ -166,6 +182,17 @@ function momentumScore(actions, goal, streak) {
   const weekly = Math.min(1, actions / Math.max(1, goal));
   const returnStrength = Math.min(1, streak / 4);
   return Math.round((weekly * 75 + returnStrength * 25));
+}
+
+function PlanStep(numberLabel, label, description, meta) {
+  return el('li', { class: 'ft-flow-plan__step' }, [
+    el('span', { class: 'ft-flow-plan__number', text: numberLabel }),
+    el('div', { class: 'ft-flow-plan__body' }, [
+      el('span', { class: 'ft-flow-plan__label', text: label }),
+      el('span', { class: 'ft-flow-plan__description', text: description }),
+    ]),
+    el('span', { class: 'ft-flow-plan__meta', text: meta }),
+  ]);
 }
 
 function DashboardSkeleton() {

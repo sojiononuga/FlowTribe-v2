@@ -139,7 +139,7 @@ export default function LoginView() {
   return el('div', { class: 'ft-auth ft-animate-in' }, [
     el('div', { class: 'ft-auth__brand' }, Logo({ size: 'lg' })),
     el('h1', { class: 'ft-auth__title', text: 'Welcome back' }),
-    el('p', { class: 'ft-auth__subtitle', text: 'Your streak is where you left it.' }),
+    el('p', { class: 'ft-auth__subtitle', text: 'Your goal, progress, and next useful move are waiting.' }),
     form,
     el('div', { class: 'ft-auth__foot' }, [
       el('p', { class: 'ft-text-sm ft-text-muted' }, [

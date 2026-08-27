@@ -289,8 +289,8 @@ function describe(date, count, isToday) {
   const day = isToday ? `Today, ${when}` : when;
 
   if (count === 0) return `${day} — nothing logged`;
-  if (count === 1) return `${day} — 1 post`;
-  return `${day} — ${count} posts`;
+  if (count === 1) return `${day} — 1 meaningful action`;
+  return `${day} — ${count} meaningful actions`;
 }
 
 /** The resting message when nothing is hovered. */
@@ -298,7 +298,7 @@ function summarise(counts, weeks) {
   const active = Object.values(counts).filter((count) => count > 0).length;
   const days = weeks.flat().filter(Boolean).length;
 
-  if (active === 0) return 'Your first square is one post away.';
+  if (active === 0) return 'Your first square is one meaningful action away.';
   return `${active} active ${active === 1 ? 'day' : 'days'} in the last ${Math.round(days / 7)} weeks.`;
 }
 

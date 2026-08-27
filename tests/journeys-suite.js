@@ -431,7 +431,13 @@ async function run() {
     assert(visited.includes('/dashboard'), `expected /dashboard, visited ${visited.join(' → ')}`);
     await go('/dashboard');
     assertLoaded("the dashboard");
-    assert(text().includes('Amaka'), 'dashboard should greet the member by name');
+    const shown = text();
+    assert(shown.includes('Amaka'), 'dashboard should greet the member by name');
+    ['YOUR GOAL', 'YOUR PLAN', 'Next action', 'Evidence', 'Progress', 'Adapt the path'].forEach((label) => {
+      assert(shown.includes(label), `competition home should make ${label} visible`);
+    });
+    assert(!/\bpost(?:s|ing)?\b|content creation/i.test(shown),
+      'the primary member home must not present Flow as a posting product');
   });
 
   await it('a wrong PIN keeps the member on login and says so without naming the field at fault', async () => {
@@ -482,6 +488,9 @@ async function run() {
     assert(!/couldn.t reach|check your connection/i.test(shown),
       'a successful action reported a network failure');
     assert(/1 of 3 meaningful actions/i.test(shown), `expected the momentum ring copy, got: ${shown.slice(0, 200)}`);
+    const celebration = document.querySelector('.ft-celebration');
+    assert(celebration && !/\bpost(?:s|ing)?\b|\bcreator\b/i.test(celebration.textContent),
+      'milestone celebrations should translate legacy creator language');
     assertLoaded('the action success screen');
   });
 
@@ -565,6 +574,10 @@ async function run() {
       await go(path);
       assertLoaded(path);
       if (marker) assert(text().includes(marker), `${path} should show ${marker}`);
+      if (path === '/milestones' || path === '/levels') {
+        assert(!/\bpost(?:s|ing)?\b|\bcreator\b/i.test(text()),
+          `${path} should translate legacy catalog language into universal Flow language`);
+      }
     });
   }
 

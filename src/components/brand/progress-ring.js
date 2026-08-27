@@ -98,7 +98,7 @@ export function ProgressRing(props) {
     goalLabel.textContent = `of ${safeGoal} this week`;
 
     node.classList.toggle('ft-ring--complete', safeValue >= safeGoal);
-    node.setAttribute('aria-label', `${safeValue} of ${safeGoal} posts this week`);
+    node.setAttribute('aria-label', `${safeValue} of ${safeGoal} meaningful actions this week`);
   }
 
   return stateful(node, {

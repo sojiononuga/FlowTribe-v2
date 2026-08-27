@@ -109,7 +109,7 @@ export function StreakFlame(props) {
 export function RankPrompt() {
   return el('div', { class: 'ft-rank-prompt' }, [
     el('span', { class: 'ft-rank-prompt__icon' }, icon(Icons.trophy)),
-    el('span', { text: 'Post this week to join the leaderboard.' }),
+    el('span', { text: 'Take one meaningful action to join the Tribe movement.' }),
   ]);
 }
 

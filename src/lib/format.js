@@ -240,8 +240,8 @@ export function weeklyProgressMessage(posted, goal) {
   const remaining = Math.max(goal - posted, 0);
 
   if (remaining === 0) return 'Weekly goal achieved.';
-  if (remaining === 1) return 'You have one post left this week.';
-  return `You have ${remaining} posts left this week.`;
+  if (remaining === 1) return 'You have one meaningful action left this week.';
+  return `You have ${remaining} meaningful actions left this week.`;
 }
 
 /* -------------------------------------------------------------------------

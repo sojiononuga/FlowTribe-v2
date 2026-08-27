@@ -18,7 +18,7 @@ import { PageHeader, Section } from '../../components/layout/index.js';
 import { Icons } from '../../lib/icons.js';
 import { call } from '../../core/api.js';
 import { toAppError } from '../../core/errors.js';
-import { MILESTONE_CATEGORIES } from '../../lib/catalog.js';
+import { MILESTONE_CATEGORIES, presentMilestone } from '../../lib/catalog.js';
 import { openMilestoneModal } from './milestone-modal.js';
 import { plural } from '../../lib/format.js';
 
@@ -46,7 +46,9 @@ export default function MilestonesView() {
 }
 
 function render(data) {
-  const { milestones, totalEarned, totalAvailable, next } = data;
+  const { totalEarned, totalAvailable } = data;
+  const milestones = data.milestones.map(presentMilestone);
+  const next = presentMilestone(data.next);
 
   const earnedNone = totalEarned === 0;
 

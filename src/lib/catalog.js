@@ -30,7 +30,7 @@ export const MILESTONE_CATEGORIES = [
   { id: 'GettingStarted', label: 'Getting started' },
   { id: 'Consistency', label: 'Consistency' },
   { id: 'WeeklyExcellence', label: 'Weekly excellence' },
-  { id: 'Posting', label: 'Posting' },
+  { id: 'Posting', label: 'Meaningful action' },
   { id: 'Community', label: 'Community' },
 ];
 
@@ -85,4 +85,52 @@ export const LEVEL_ICON_ORDER = [
  */
 export function fallbackLevelIcon(sortOrder) {
   return LEVEL_ICON_ORDER[Math.max(0, Math.min(sortOrder - 1, LEVEL_ICON_ORDER.length - 1))];
+}
+
+/* Legacy catalog rows remain the compatibility engine in production. These
+   display adapters generalise their language without changing ids, unlock
+   rules, existing member history, or the spreadsheet schema. */
+const MILESTONE_PRESENTATION = {
+  'first-step': { name: 'First Step', description: 'You recorded your first meaningful action.' },
+  'posts-10': { name: '10 Actions', description: 'Ten meaningful actions recorded.' },
+  'posts-50': { name: '50 Actions', description: 'Fifty meaningful actions recorded.' },
+  'posts-100': { name: '100 Actions', description: 'One hundred meaningful actions recorded.' },
+  'posts-250': { name: '250 Actions', description: 'Two hundred and fifty meaningful actions recorded.' },
+  'posts-500': { name: '500 Actions', description: 'Five hundred meaningful actions recorded.' },
+};
+
+const LEVEL_PRESENTATION = {
+  creator: { name: 'Mover', description: 'You are turning intention into visible action.' },
+  'consistent-creator': { name: 'Momentum Builder', description: 'Returning has become part of how you move.' },
+};
+
+export function presentMilestone(milestone) {
+  if (!milestone) return milestone;
+  const byId = MILESTONE_PRESENTATION[milestone.milestoneId];
+  if (byId) return { ...milestone, ...byId };
+
+  // Newly-unlocked evaluator results predate the API row mapper and may carry
+  // `id` instead of `milestoneId`. The name fallback also protects manually
+  // edited legacy spreadsheets during the transition.
+  const id = milestone.id || Object.keys(MILESTONE_PRESENTATION).find((key) => {
+    const legacyName = key === 'first-step' ? 'First Step' : `${key.split('-')[1]} Posts`;
+    return milestone.name === legacyName;
+  });
+  const display = MILESTONE_PRESENTATION[id];
+  if (display) return { ...milestone, ...display };
+
+  return {
+    ...milestone,
+    name: String(milestone.name || '').replace(/\bPosts\b/g, 'Actions'),
+    description: String(milestone.description || '').replace(/\bposts?\b/gi, (word) => word[0] === word[0].toUpperCase() ? 'Action' : 'action'),
+  };
+}
+
+export function presentLevel(level) {
+  if (!level) return level;
+  const byId = LEVEL_PRESENTATION[level.levelId || level.id];
+  if (byId) return { ...level, ...byId };
+  if (level.name === 'Creator') return { ...level, ...LEVEL_PRESENTATION.creator };
+  if (level.name === 'Consistent Creator') return { ...level, ...LEVEL_PRESENTATION['consistent-creator'] };
+  return level;
 }

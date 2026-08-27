@@ -63,6 +63,11 @@ function FormState(root) {
       el('h2', { class: 'ft-section__title ft-mt-2', text: member.goalTitle }),
       member.showingUp ? el('p', { class: 'ft-text-sm ft-text-muted ft-mt-2', text: `Showing up: ${member.showingUp}` }) : null,
     ]) : null,
+    el('ol', { class: 'ft-adapt-path', attrs: { 'aria-label': 'How Flow Adapt works' } }, [
+      AdaptStep('1', 'Reality', 'Tell Flow what changed', true),
+      AdaptStep('2', 'Proposal', 'See a credible revised route'),
+      AdaptStep('3', 'Recovery', 'Choose one useful next action'),
+    ]),
     Card({}, [field, el('div', { class: 'ft-mt-6' }, button)]),
     el('p', { class: 'ft-text-sm ft-text-muted ft-text-center', text: 'Flow Adapt never silently changes your goal. You choose whether to accept the revised path.' }),
   ]);
@@ -107,16 +112,26 @@ function ProposalState(root, proposal) {
 }
 
 function ProposalCard(proposal) {
-  return Card({}, [
+  return Card({ variant: 'raised' }, [
     el('p', { class: 'ft-text-xs ft-text-muted', text: 'GOAL PRESERVED' }),
     el('h2', { class: 'ft-section__title ft-mt-2', text: proposal.preservedGoal }),
-    el('div', { class: 'ft-mt-6' }, [
-      el('p', { class: 'ft-text-xs ft-text-muted', text: 'TODAY' }),
-      el('p', { class: 'ft-text-md ft-mt-2', text: proposal.today }),
+    el('div', { class: 'ft-adapt-next ft-mt-6' }, [
+      el('p', { class: 'ft-adapt-next__label', text: 'YOUR NEXT ACTION' }),
+      el('p', { class: 'ft-adapt-next__text', text: proposal.today }),
     ]),
     el('div', { class: 'ft-mt-6' }, [
       el('p', { class: 'ft-text-xs ft-text-muted', text: 'THEN' }),
       el('p', { class: 'ft-text-sm ft-mt-2', text: proposal.next }),
+    ]),
+  ]);
+}
+
+function AdaptStep(numberLabel, label, description, active = false) {
+  return el('li', { class: active ? 'ft-adapt-path__step ft-adapt-path__step--active' : 'ft-adapt-path__step' }, [
+    el('span', { class: 'ft-adapt-path__number', text: numberLabel }),
+    el('span', { class: 'ft-adapt-path__copy' }, [
+      el('strong', { text: label }),
+      el('small', { text: description }),
     ]),
   ]);
 }
