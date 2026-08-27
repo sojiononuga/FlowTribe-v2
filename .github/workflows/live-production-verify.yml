@@ -72,7 +72,8 @@ jobs:
 
           await page.goto(`${site}/admin.html`, { waitUntil: 'networkidle', timeout: 30000 });
           await page.getByText('Welcome back', { exact: true }).waitFor({ timeout: 15000 });
-          if (!page.url().includes('/#/login')) throw new Error(`unauthenticated admin did not redirect to login: ${page.url()}`);
+          const redirected = new URL(page.url());
+          if (redirected.hash !== '#/login') throw new Error(`unauthenticated admin did not redirect to login: ${page.url()}`);
           if ((await page.title()) !== 'Log in · Flow Tribe') throw new Error(`redirected title: ${await page.title()}`);
 
           if (errors.length) throw new Error(errors.join('\n'));
