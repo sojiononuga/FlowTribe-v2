@@ -43,6 +43,60 @@
   margin-top: var(--ft-space-8);
 }
 
+.ft-demo-entry {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ft-space-1);
+  margin-top: var(--ft-space-6);
+  padding: var(--ft-space-4);
+  background: var(--ft-bg-brand-soft);
+  color: var(--ft-text-primary);
+  border: 1px solid var(--ft-burgundy-200);
+  border-radius: var(--ft-radius-xl);
+  text-decoration: none;
+}
+
+.ft-demo-entry:hover { border-color: var(--ft-burgundy-400); box-shadow: var(--ft-shadow-sm); }
+.ft-demo-entry__label { color: var(--ft-text-brand); font-size: var(--ft-text-xs); font-weight: var(--ft-weight-bold); letter-spacing: var(--ft-tracking-wide); }
+.ft-demo-entry > span:last-child { color: var(--ft-text-secondary); font-size: var(--ft-text-sm); }
+
+/* ==========================================================================
+   Public Flow Intelligence demo
+   ========================================================================== */
+
+.ft-demo { width: 100%; padding-block: var(--ft-space-4) var(--ft-space-12); }
+.ft-demo__shell { display: flex; flex-direction: column; gap: var(--ft-space-6); width: 100%; }
+.ft-demo__topbar { display: flex; align-items: center; justify-content: space-between; gap: var(--ft-space-4); }
+.ft-demo__login { color: var(--ft-text-brand); font-size: var(--ft-text-sm); font-weight: var(--ft-weight-semibold); }
+.ft-demo__intro { padding-block: var(--ft-space-4) var(--ft-space-2); }
+.ft-demo__badge,
+.ft-demo__ai-label {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--ft-space-2);
+  color: var(--ft-text-brand);
+  font-size: var(--ft-text-xs);
+  font-weight: var(--ft-weight-bold);
+  letter-spacing: var(--ft-tracking-wide);
+}
+.ft-demo__badge { padding: var(--ft-space-2) var(--ft-space-3); background: var(--ft-bg-brand-soft); border-radius: var(--ft-radius-full); }
+.ft-demo__badge svg,
+.ft-demo__ai-label svg { width: 1rem; height: 1rem; }
+.ft-demo__title { max-width: 32rem; margin-top: var(--ft-space-5); font-size: var(--ft-text-3xl); line-height: var(--ft-leading-tight); letter-spacing: var(--ft-tracking-tight); }
+.ft-demo__subtitle { max-width: 34rem; margin-top: var(--ft-space-3); color: var(--ft-text-secondary); font-size: var(--ft-text-md); line-height: var(--ft-leading-relaxed); }
+.ft-demo__textarea { min-height: 7rem; resize: vertical; line-height: var(--ft-leading-relaxed); }
+.ft-demo__privacy { color: var(--ft-text-muted); font-size: var(--ft-text-xs); text-align: center; }
+.ft-demo__result-head { padding-block: var(--ft-space-4); }
+.ft-demo__result-title { max-width: 31rem; margin-top: var(--ft-space-3); font-size: var(--ft-text-3xl); line-height: var(--ft-leading-tight); }
+.ft-demo__next { max-width: 31rem; margin-top: var(--ft-space-3); font-size: var(--ft-text-xl); line-height: var(--ft-leading-snug); }
+.ft-demo__preserved { display: flex; flex-direction: column; gap: var(--ft-space-1); padding: var(--ft-space-4); background: var(--ft-gold-50); color: var(--ft-gold-800); border-radius: var(--ft-radius-lg); font-size: var(--ft-text-sm); }
+.ft-demo__preserved span { font-size: var(--ft-text-xs); font-weight: var(--ft-weight-bold); letter-spacing: var(--ft-tracking-wide); text-transform: uppercase; }
+
+@media (min-width: 768px) {
+  .ft-demo { padding-block: var(--ft-space-8) var(--ft-space-16); }
+  .ft-demo__title { font-size: var(--ft-text-4xl); }
+}
+
 .ft-auth__error {
   padding: var(--ft-space-3) var(--ft-space-4);
   background-color: var(--ft-danger-50);

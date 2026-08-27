@@ -91,6 +91,11 @@ const routes = [
     view: () => import('./features/auth/register-view.js'),
   },
   {
+    path: '/demo',
+    title: 'Interactive demo',
+    view: () => import('./features/demo/demo-view.js'),
+  },
+  {
     path: '/welcome',
     title: 'Welcome',
     guard: requireAuth,
@@ -186,7 +191,7 @@ const NAV_ITEMS = [
 // can reach nothing else, so a navigation bar of links that all fail is worse
 // than no navigation bar.
 const BARE_ROUTES = new Set([
-  '/', '/login', '/register', '/welcome', '/help/pin', '/change-pin',
+  '/', '/login', '/register', '/demo', '/welcome', '/help/pin', '/change-pin',
 ]);
 
 /* -------------------------------------------------------------------------

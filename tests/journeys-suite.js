@@ -226,6 +226,7 @@ function installTransport() {
 const ROUTES = {
   '/login': () => import('../src/features/auth/login-view.js').then((m) => m.default),
   '/register': () => import('../src/features/auth/register-view.js').then((m) => m.default),
+  '/demo': () => import('../src/features/demo/demo-view.js').then((m) => m.default),
   '/welcome': () => import('../src/features/auth/welcome-view.js').then((m) => m.WelcomeView),
   '/help/pin': () => import('../src/features/auth/welcome-view.js').then((m) => m.ForgotPinView),
   '/change-pin': () => import('../src/features/auth/change-pin-view.js').then((m) => m.default),
@@ -366,6 +367,26 @@ async function signedInMember(world, overrides = {}) {
 
 async function run() {
   installTransport();
+
+  /* ---- Public intelligence demo -------------------------------------- */
+
+  group('PUBLIC FLOW INTELLIGENCE DEMO');
+
+  await it('a visitor can see Flow understand a disruption and propose a useful next action without an account', async () => {
+    freshWorld();
+    await go('/demo');
+    assert(/Interactive AI demo/i.test(text()), 'the public screen should identify the AI demonstration');
+    type(byLabel('What changed in real life?'), 'My work shift changed and I only have twenty minutes tonight');
+    button('Let Flow adapt my path').click();
+    await waitFor(() => /AI RECOMMENDATION/.test(text()), 'the intelligence result to render');
+
+    const shown = text();
+    ['Understood', 'Preserved', 'Replanned', 'Your one useful next action', 'Progress preserved'].forEach((label) => {
+      assert(shown.includes(label), `the demo should visibly include ${label}`);
+    });
+    assert(/15-minute timer/i.test(shown), 'the proposal should respond to the time constraint');
+    assertLoaded('the public Flow Intelligence demo');
+  });
 
   /* ---- Registration ---------------------------------------------------- */
 

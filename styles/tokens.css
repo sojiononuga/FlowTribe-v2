@@ -11,44 +11,31 @@
    ========================================================================== */
 
 :root {
-  /* ---- Brand: burgundy -------------------------------------------------
-     600 is Deep Burgundy (#5B0000), the approved primary from the Flow
-     Tribe Design System. The scale is built around it so we can tint and
-     shade without inventing values ad hoc, which is how v1 ended up with
-     three different pinks.
+  /* ---- Brand: atmospheric indigo --------------------------------------
+     The historic variable name remains as a compatibility seam so every
+     component can adopt the new palette without a risky broad rewrite. */
+  --ft-burgundy-50:  #f2f3ff;
+  --ft-burgundy-100: #e5e7ff;
+  --ft-burgundy-200: #cbd0ff;
+  --ft-burgundy-300: #a9b0fb;
+  --ft-burgundy-400: #838bf2;
+  --ft-burgundy-500: #686fe7;
+  --ft-burgundy-600: #565bd6;
+  --ft-burgundy-700: #474bb4;
+  --ft-burgundy-800: #3b3e91;
+  --ft-burgundy-900: #303372;
 
-     #5B0000 has zero green and zero blue, so a naive tint toward white
-     drifts orange. These steps are hand-tuned to stay on the burgundy
-     hue: red always leads, green and blue track each other. */
-  --ft-burgundy-50:  #fceded;
-  --ft-burgundy-100: #f6d5d5;
-  --ft-burgundy-200: #e8a0a0;
-  --ft-burgundy-300: #ce5c5c;
-  --ft-burgundy-400: #a82121;
-  --ft-burgundy-500: #7d0b0b;
-  --ft-burgundy-600: #5b0000;  /* brand — Deep Burgundy */
-  --ft-burgundy-700: #4a0000;
-  --ft-burgundy-800: #3a0000;
-  --ft-burgundy-900: #260000;
-
-  /* ---- Brand: gold -----------------------------------------------------
-     400 is Golden Yellow (#F5B400), the approved accent. Gold is an accent,
-     never a surface: it marks progress and achievement so those moments
-     stay special.
-
-     ⚠️ #F5B400 on white is roughly 1.8:1 — far below the 4.5:1 AA needs for
-     normal text. Use 400 for fills, borders, icons, and large numerals.
-     For gold TEXT on a light background use 700, which clears AA at 5.5:1. */
-  --ft-gold-50:  #fef7e6;
-  --ft-gold-100: #fdedc2;
-  --ft-gold-200: #fbdc8a;
-  --ft-gold-300: #f8c845;
-  --ft-gold-400: #f5b400;  /* brand — Golden Yellow */
-  --ft-gold-500: #d19700;
-  --ft-gold-600: #a67a00;
-  --ft-gold-700: #8a6200;  /* AA-safe gold for text */
-  --ft-gold-800: #654800;
-  --ft-gold-900: #422f00;
+  /* ---- Accent: fresh mint --------------------------------------------- */
+  --ft-gold-50:  #eefbf7;
+  --ft-gold-100: #d7f5ea;
+  --ft-gold-200: #afe9d5;
+  --ft-gold-300: #7bd8b8;
+  --ft-gold-400: #50c5a0;
+  --ft-gold-500: #31aa87;
+  --ft-gold-600: #238b70;
+  --ft-gold-700: #1d705c;
+  --ft-gold-800: #195a4b;
+  --ft-gold-900: #154a3f;
 
   /* ---- Neutrals --------------------------------------------------------
      True greys, per the Design System: Background #F8F8F8, Border #E5E5E5,
@@ -58,17 +45,17 @@
      500 and 600 are set by contrast rather than by even spacing: muted text
      must still clear AA on the #F8F8F8 page background. */
   --ft-neutral-0:   #ffffff;
-  --ft-neutral-25:  #fcfcfc;
-  --ft-neutral-50:  #f8f8f8;  /* Design System — Background */
-  --ft-neutral-100: #f1f1f1;
-  --ft-neutral-200: #e5e5e5;  /* Design System — Border */
-  --ft-neutral-300: #d4d4d4;
-  --ft-neutral-400: #bdbdbd;  /* Design System — Disabled */
-  --ft-neutral-500: #6e6e6e;  /* muted text — 4.8:1 on the page background */
-  --ft-neutral-600: #545454;  /* secondary text — 7.1:1 */
-  --ft-neutral-700: #3d3d3d;
-  --ft-neutral-800: #2e2e2e;
-  --ft-neutral-900: #222222;  /* Design System — Text */
+  --ft-neutral-25:  #fbfcff;
+  --ft-neutral-50:  #f7f8fc;
+  --ft-neutral-100: #eef0f6;
+  --ft-neutral-200: #e1e4ed;
+  --ft-neutral-300: #cdd1dd;
+  --ft-neutral-400: #aeb4c3;
+  --ft-neutral-500: #697184;
+  --ft-neutral-600: #535b6e;
+  --ft-neutral-700: #3b4355;
+  --ft-neutral-800: #262e40;
+  --ft-neutral-900: #172033;
 
   /* ---- Status ----------------------------------------------------------
      The approved Design System hues, split by job — see

@@ -118,7 +118,7 @@ try {
     journeyPage,
     'tests/journeys.html',
     () => window.__JOURNEYS__ || null,
-    18,
+    19,
     'Journey verification',
   );
   await journeyPage.close();
