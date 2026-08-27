@@ -98,7 +98,7 @@
     freshInstall();
     arm('recovery.admin', '539182', 'RESET recovery.admin');
     operatorRecoverSuperAdmin();
-    var audit = AuditRepo.all();
+    var audit = AuditRepo.list(200);
     var event = audit.filter(function (row) { return row.action === 'SUPER_ADMIN_RECOVERY'; }).pop();
     assert(event, 'missing SUPER_ADMIN_RECOVERY audit event');
     assert(JSON.stringify(event).indexOf('539182') === -1, 'temporary PIN leaked into audit data');
