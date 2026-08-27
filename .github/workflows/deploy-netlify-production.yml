@@ -119,4 +119,4 @@ jobs:
           cat netlify-deploy.json
           echo "Production site: ${{ steps.site.outputs.site_url }}"
 
-# retrigger after Netlify token provisioning
+# competition release trigger: 2026-08-27
