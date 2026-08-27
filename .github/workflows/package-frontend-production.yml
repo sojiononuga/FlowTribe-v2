@@ -1,0 +1,66 @@
+name: package production frontend
+
+on:
+  push:
+    paths:
+      - '.github/workflows/package-frontend-production.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  package:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+      - name: Prepare production frontend
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -rf deploy
+          mkdir deploy
+          rsync -a ./ deploy/ \
+            --exclude='.git' \
+            --exclude='.github' \
+            --exclude='deploy' \
+            --exclude='tests' \
+            --exclude='docs' \
+            --exclude='dist' \
+            --exclude='scripts' \
+            --exclude='appsscript' \
+            --exclude='.clasp.json*' \
+            --exclude='.claude'
+          cat > deploy/src/core/config.js <<'EOF'
+          export const config = {
+            version: '2.0.0',
+            api: {
+              baseUrl: 'https://script.google.com/macros/s/AKfycbwWWVFp0K9oJKkZsnOackCSCmeAUPxZLRANX9v1YN0Dl-Y3VdTg_4Qp5_s-arhYZuOB/exec',
+              timeoutMs: 20000,
+            },
+            app: {
+              name: 'Flow Tribe',
+              memberEntry: 'index.html',
+              adminEntry: 'admin.html',
+              timezone: 'Africa/Lagos',
+            },
+            rules: {
+              pinLength: 6,
+              usernameMinLength: 3,
+              usernameMaxLength: 20,
+              bioMaxLength: 160,
+            },
+            debug: false,
+          };
+          export default config;
+          EOF
+          rm -f deploy/gallery.html
+          printf 'Source commit: %s\nAPI: %s\n' "$(git rev-parse HEAD)" 'production Apps Script /exec' > deploy/DEPLOYMENT.txt
+      - name: Upload production frontend bundle
+        uses: actions/upload-artifact@v4
+        with:
+          name: flow-tribe-production-frontend
+          path: deploy/
+          if-no-files-found: error
+          retention-days: 7
