@@ -39,6 +39,11 @@ jobs:
           printf '%s\n' "$RESPONSE"
           printf '%s' "$RESPONSE" | jq -e '.ok == true and (.data.available | type == "boolean")' >/dev/null
 
+          LOGIN_BODY="$(jq -nc --arg u "$USERNAME" '{action:"auth.login",payload:{username:$u,pin:"539182"},requestId:("live-login-"+$u),clientVersion:"2.0.0"}')"
+          LOGIN_RESPONSE="$(curl -fsSL --retry 5 --retry-delay 2 -H 'Content-Type: text/plain;charset=utf-8' --data "$LOGIN_BODY" "$API_URL")"
+          printf '%s\n' "$LOGIN_RESPONSE"
+          printf '%s' "$LOGIN_RESPONSE" | jq -e '.ok == false and .error.code == "AUTH_FAILED"' >/dev/null
+
       - name: Install Chromium verification runtime
         shell: bash
         run: |
@@ -63,16 +68,15 @@ jobs:
           await page.goto(`${site}/#/login`, { waitUntil: 'networkidle', timeout: 30000 });
           await page.getByText('Welcome back', { exact: true }).waitFor({ timeout: 15000 });
           await page.getByRole('button', { name: 'Log in' }).waitFor({ timeout: 15000 });
-          if ((await page.title()) !== 'Flow Tribe') throw new Error(`member title: ${await page.title()}`);
+          if ((await page.title()) !== 'Log in · Flow Tribe') throw new Error(`member title: ${await page.title()}`);
 
           await page.goto(`${site}/admin.html`, { waitUntil: 'networkidle', timeout: 30000 });
-          if ((await page.title()) !== 'Flow Tribe · Admin') throw new Error(`admin title: ${await page.title()}`);
-          await page.locator('#app').waitFor({ timeout: 15000 });
-          const adminText = (await page.locator('#app').innerText()).trim();
-          if (!adminText) throw new Error('admin shell rendered no content');
+          await page.getByText('Welcome back', { exact: true }).waitFor({ timeout: 15000 });
+          if (!page.url().includes('/#/login')) throw new Error(`unauthenticated admin did not redirect to login: ${page.url()}`);
+          if ((await page.title()) !== 'Log in · Flow Tribe') throw new Error(`redirected title: ${await page.title()}`);
 
           if (errors.length) throw new Error(errors.join('\n'));
           await browser.close();
-          console.log('LIVE MEMBER + ADMIN ENTRY SCREENS PASSED');
+          console.log('LIVE LOGIN + ADMIN GUARD SCREENS PASSED');
           EOF
           node live-check.mjs
