@@ -81,3 +81,5 @@ jobs:
           console.log('LIVE LOGIN + ADMIN GUARD SCREENS PASSED');
           EOF
           node live-check.mjs
+
+# UI modernization live verification trigger: 2026-08-28
