@@ -118,7 +118,7 @@
   background-color: var(--ft-cal-l0);
   /* A hairline inside the square keeps empty days legible on a white card
      without adding a second colour. */
-  box-shadow: inset 0 0 0 1px rgba(91, 0, 0, 0.05);
+  box-shadow: var(--ft-shadow-inset-subtle);
   transition:
     transform var(--ft-duration-fast) var(--ft-ease-spring),
     box-shadow var(--ft-duration-fast) var(--ft-ease-standard);
@@ -141,7 +141,7 @@
   outline-offset: 1px;
 }
 
-/* Today carries a gold ring — always identifiable, whether or not it is
+/* Today carries a mint ring — always identifiable, whether or not it is
    filled. This is the one square a member looks for. */
 .ft-calendar__day--today {
   box-shadow: 0 0 0 2px var(--ft-gold-400);
@@ -250,7 +250,7 @@
 }
 
 /* The unlock moment. Applied where a milestone is being celebrated rather
-   than merely listed: a soft gold halo that swells once and settles,
+   than merely listed: a soft mint halo that swells once and settles,
    alongside the badge's own scale-in. Restrained on purpose — the Design
    System asks for "rewarding, not distracting". */
 .ft-badge-medal--celebrate {
