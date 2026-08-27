@@ -119,4 +119,4 @@ jobs:
           cat netlify-deploy.json
           echo "Production site: ${{ steps.site.outputs.site_url }}"
 
-# competition release trigger: 2026-08-27
+# modern intelligence release trigger: 2026-08-27
