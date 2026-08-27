@@ -80,7 +80,7 @@ async function verifyHarness(page, pathname, resultExpression, expectedTotal, la
   }
   if (failed !== 0) {
     const details = Array.isArray(result.results)
-      ? result.results.filter((item) => !item.ok).map((item) => `${item.group}: ${item.name} — ${item.detail}`).join('\n')
+      ? result.results.filter((item) => !item.ok).map((item) => `${item.group || label}: ${item.name} — ${item.detail}`).join('\n')
       : `${failed} failed`;
     throw new Error(`${label} failed:\n${details}`);
   }
@@ -102,6 +102,16 @@ try {
     'Backend verification',
   );
   await backendPage.close();
+
+  const recoveryPage = await browser.newPage();
+  await verifyHarness(
+    recoveryPage,
+    'tests/recovery.html',
+    () => window.__RECOVERY_RESULTS__ || null,
+    6,
+    'Operator recovery verification',
+  );
+  await recoveryPage.close();
 
   const journeyPage = await browser.newPage({ viewport: { width: 390, height: 844 } });
   await verifyHarness(
