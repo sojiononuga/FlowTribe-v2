@@ -38,12 +38,11 @@
   --ft-gold-900: #154a3f;
 
   /* ---- Neutrals --------------------------------------------------------
-     True greys, per the Design System: Background #F8F8F8, Border #E5E5E5,
-     Text #222222, Disabled #BDBDBD. These replace the warm-tinted neutrals
-     used through Phase 7.
+     Warm cream neutrals support the approved forest/mint palette. White is
+     retained for raised surfaces; the page background is a soft cream.
 
-     500 and 600 are set by contrast rather than by even spacing: muted text
-     must still clear AA on the #F8F8F8 page background. */
+     500 and 600 are set by contrast rather than by even spacing so muted
+     text still clears AA on the cream page background. */
   --ft-neutral-0:   #ffffff;
   --ft-neutral-25:  #fbfaf6;
   --ft-neutral-50:  #f6f4ee;
@@ -98,8 +97,8 @@
   --ft-text-muted:     var(--ft-neutral-500);
   --ft-text-inverse:   var(--ft-neutral-0);
   --ft-text-brand:     var(--ft-burgundy-600);
-  /* Gold 400 fails AA as text. Accent TEXT uses 700; gold as a fill or
-     numeral keeps --ft-gold-400. */
+  /* Mint 400 fails AA as text. Accent TEXT uses 700; mint as a fill or
+     numeral keeps --ft-gold-400 through the compatibility seam. */
   --ft-text-accent:    var(--ft-gold-700);
 
   --ft-border-subtle:  var(--ft-neutral-200);
@@ -208,19 +207,20 @@
   --ft-radius-full: 9999px;   /* badges */
 
   /* ---- Elevation -------------------------------------------------------
-     Burgundy-tinted rather than black. A neutral drop shadow on a warm
-     palette looks like dirt; a tinted one looks intentional.
+     Forest-tinted rather than black. A neutral drop shadow on the cream
+     palette looks dirty; a restrained forest tint keeps depth coherent.
 
      The Design System names three levels — cards, hover, modals. They map
      onto sm, md, and lg. xs and xl remain for the hairline and the
      full-screen cases the document does not enumerate. All soft, never
      harsh. */
-  --ft-shadow-xs: 0 1px 2px rgba(91, 0, 0, 0.05);
-  --ft-shadow-sm: 0 2px 8px rgba(91, 0, 0, 0.07);   /* Level 1 — cards */
-  --ft-shadow-md: 0 6px 20px rgba(91, 0, 0, 0.10);  /* Level 2 — hover */
-  --ft-shadow-lg: 0 14px 40px rgba(91, 0, 0, 0.12); /* Level 3 — modals */
-  --ft-shadow-xl: 0 24px 64px rgba(91, 0, 0, 0.16); /* reserved — unused */
-  --ft-shadow-focus: 0 0 0 3px rgba(91, 0, 0, 0.18);
+  --ft-shadow-xs: 0 1px 2px rgba(20, 51, 42, 0.05);
+  --ft-shadow-sm: 0 2px 8px rgba(20, 51, 42, 0.07);   /* Level 1 — cards */
+  --ft-shadow-md: 0 6px 20px rgba(20, 51, 42, 0.10);  /* Level 2 — hover */
+  --ft-shadow-lg: 0 14px 40px rgba(20, 51, 42, 0.12); /* Level 3 — modals */
+  --ft-shadow-xl: 0 24px 64px rgba(20, 51, 42, 0.16); /* reserved — unused */
+  --ft-shadow-inset-subtle: inset 0 0 0 1px rgba(20, 51, 42, 0.05);
+  --ft-shadow-focus: 0 0 0 3px rgba(36, 99, 78, 0.18);
   --ft-shadow-focus-danger: 0 0 0 3px rgba(220, 38, 38, 0.20);
 
   /* ---- Motion ----------------------------------------------------------
@@ -272,9 +272,9 @@
   --ft-icon-feature: 5rem;     /* 80px — feature highlights */
   --ft-icon-inline:  1rem;     /* 16px — trailing hints inside dense text */
 
-  /* Icon state colours. Default and active are the Design System's; the
-     status three reuse the -700 text companions so an icon beside a label
-     matches it. Disabled is the specified #BDBDBD (neutral-400). */
+  /* Icon state colours. Default and active follow the current brand system;
+     the status three reuse the -700 text companions so an icon beside a
+     label matches it. Disabled follows neutral-400. */
   --ft-icon-default:  var(--ft-text-primary);
   --ft-icon-active:   var(--ft-burgundy-600);
   --ft-icon-success:  var(--ft-success-700);
@@ -305,16 +305,16 @@
 }
 
 /* ---- Dark theme -----------------------------------------------------------
-   The spec calls for a white background, so light is the only theme shipped.
-   This block exists to prove the token layer supports a theme swap without
-   touching a component: override the semantic surfaces, nothing else.
-   Activated by data-theme="dark" on <html>. Not currently reachable in the UI. */
+   Light is the only theme currently shipped. This block exists to prove the
+   token layer supports a theme swap without touching a component: override
+   the semantic surfaces, nothing else. Activated by data-theme="dark" on
+   <html>. Not currently reachable in the UI. */
 :root[data-theme='dark'] {
   --ft-bg-page:       var(--ft-neutral-900);
   --ft-bg-surface:    var(--ft-neutral-800);
   --ft-bg-raised:     var(--ft-neutral-700);
   --ft-bg-sunken:     #141414;
-  --ft-bg-brand-soft: rgba(91, 0, 0, 0.35);
+  --ft-bg-brand-soft: rgba(36, 99, 78, 0.35);
   --ft-bg-overlay:    rgba(0, 0, 0, 0.7);
 
   --ft-text-primary:   var(--ft-neutral-50);
