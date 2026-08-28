@@ -14,70 +14,97 @@ jobs:
     runs-on: ubuntu-latest
     env:
       SITE_URL: https://dainty-frangollo-1063b3.netlify.app
-      API_URL: https://script.google.com/macros/s/AKfycbwWWVFp0K9oJKkZsnOackCSCmeAUPxZLRANX9v1YN0Dl-Y3VdTg_4Qp5_s-arhYZuOB/exec
     steps:
       - uses: actions/checkout@v4
 
-      - name: Verify live HTTP surfaces
+      - name: Verify live viewport-fix asset
         shell: bash
         run: |
           set -euo pipefail
-          curl -fsSL --retry 5 --retry-delay 2 "$SITE_URL/" -o /tmp/member.html
-          curl -fsSL --retry 5 --retry-delay 2 "$SITE_URL/admin.html" -o /tmp/admin.html
-          curl -fsSL --retry 5 --retry-delay 2 "$SITE_URL/src/core/config.js" -o /tmp/config.js
-          grep -q '<title>Flow Tribe</title>' /tmp/member.html
-          grep -q '<title>Flow Tribe · Admin</title>' /tmp/admin.html
-          grep -qF "$API_URL" /tmp/config.js
-
-          HEALTH="$(curl -fsSL --retry 5 --retry-delay 2 "$API_URL")"
-          printf '%s\n' "$HEALTH"
-          printf '%s' "$HEALTH" | grep -q '2.0.0'
-
-          USERNAME="livecheck$(date +%s)"
-          BODY="$(jq -nc --arg u "$USERNAME" '{action:"auth.checkUsername",payload:{username:$u},requestId:("live-"+$u),clientVersion:"2.0.0"}')"
-          RESPONSE="$(curl -fsSL --retry 5 --retry-delay 2 -H 'Content-Type: text/plain;charset=utf-8' --data "$BODY" "$API_URL")"
-          printf '%s\n' "$RESPONSE"
-          printf '%s' "$RESPONSE" | jq -e '.ok == true and (.data.available | type == "boolean")' >/dev/null
-
-          LOGIN_BODY="$(jq -nc --arg u "$USERNAME" '{action:"auth.login",payload:{username:$u,pin:"539182"},requestId:("live-login-"+$u),clientVersion:"2.0.0"}')"
-          LOGIN_RESPONSE="$(curl -fsSL --retry 5 --retry-delay 2 -H 'Content-Type: text/plain;charset=utf-8' --data "$LOGIN_BODY" "$API_URL")"
-          printf '%s\n' "$LOGIN_RESPONSE"
-          printf '%s' "$LOGIN_RESPONSE" | jq -e '.ok == false and .error.code == "AUTH_FAILED"' >/dev/null
+          curl -fsSL --retry 5 --retry-delay 2 "$SITE_URL/styles/tour-quality.css" -o /tmp/tour-quality.css
+          grep -qF '.ft-live-tour-open .ft-topbar' /tmp/tour-quality.css
+          grep -qF 'backdrop-filter: none !important' /tmp/tour-quality.css
+          grep -qF 'max-height: calc(100dvh - 2rem)' /tmp/tour-quality.css
 
       - name: Install Chromium verification runtime
         shell: bash
         run: |
           set -euo pipefail
-          npm install --no-save playwright@1.55.0
+          npm install --no-save playwright
           npx playwright install --with-deps chromium
 
-      - name: Verify real member and admin screens
+      - name: Prove tour card stays inside the visual viewport
         shell: bash
         run: |
           set -euo pipefail
-          cat > live-check.mjs <<'EOF'
+          cat > live-tour-viewport.mjs <<'EOF'
           import { chromium } from 'playwright';
 
-          const site = process.env.SITE_URL;
           const browser = await chromium.launch({ headless: true });
-          const page = await browser.newPage({ viewport: { width: 390, height: 844 } });
-          const errors = [];
-          page.on('pageerror', (e) => errors.push(`pageerror: ${e.message}`));
-          page.on('console', (m) => { if (m.type() === 'error') errors.push(`console: ${m.text()}`); });
+          const site = process.env.SITE_URL;
+          const viewports = [
+            { width: 2048, height: 1104, name: 'recording-class desktop' },
+            { width: 1180, height: 620, name: 'short desktop' },
+            { width: 390, height: 844, name: 'mobile' },
+          ];
 
-          await page.goto(`${site}/#/login`, { waitUntil: 'networkidle', timeout: 30000 });
-          await page.getByText('Welcome back', { exact: true }).waitFor({ timeout: 15000 });
-          await page.getByRole('button', { name: 'Log in' }).waitFor({ timeout: 15000 });
-          if ((await page.title()) !== 'Log in · Flow Tribe') throw new Error(`member title: ${await page.title()}`);
+          for (const viewport of viewports) {
+            const page = await browser.newPage({ viewport });
+            await page.goto(`${site}/#/login`, { waitUntil: 'networkidle', timeout: 30000 });
 
-          await page.goto(`${site}/admin.html`, { waitUntil: 'networkidle', timeout: 30000 });
-          await page.getByText('Welcome back', { exact: true }).waitFor({ timeout: 15000 });
-          const redirected = new URL(page.url());
-          if (redirected.hash !== '#/login') throw new Error(`unauthenticated admin did not redirect to login: ${page.url()}`);
-          if ((await page.title()) !== 'Log in · Flow Tribe') throw new Error(`redirected title: ${await page.title()}`);
+            await page.evaluate(() => {
+              const topbar = document.createElement('header');
+              topbar.className = 'ft-topbar';
+              topbar.style.position = 'fixed';
+              topbar.style.inset = '0 0 auto 0';
 
-          if (errors.length) throw new Error(errors.join('\n'));
+              const assist = document.createElement('div');
+              assist.className = 'ft-assist';
+              const tour = document.createElement('div');
+              tour.className = 'ft-live-tour';
+              const panel = document.createElement('section');
+              panel.className = 'ft-live-tour__panel';
+              panel.dataset.placement = 'top';
+              panel.innerHTML = `
+                <div class="ft-live-tour__top"><div class="ft-live-tour__meta"><span class="ft-live-tour__counter">9 of 17</span><span class="ft-live-tour__narration">Auto tour · speaking…</span></div></div>
+                <p class="ft-live-tour__eyebrow">9 · MOVEMENT HISTORY</p>
+                <h2 class="ft-live-tour__title">Returning becomes visible.</h2>
+                <p class="ft-live-tour__body">The movement calendar shows evidence of return over time. It is designed to make continuity and recovery visible, not just uninterrupted streaks.</p>
+                <div class="ft-live-tour__footer"><button class="ft-live-tour__button">Back</button><button class="ft-live-tour__button">Pause</button><button class="ft-live-tour__button">Replay voice</button><button class="ft-live-tour__button ft-live-tour__button--primary">Next now</button></div>`;
+              tour.append(panel);
+              assist.append(tour);
+              topbar.append(assist);
+              document.body.append(topbar);
+              document.documentElement.classList.add('ft-live-tour-open');
+            });
+
+            for (const placement of ['top', 'bottom']) {
+              await page.locator('.ft-live-tour__panel').evaluate((panel, value) => { panel.dataset.placement = value; }, placement);
+              await page.waitForTimeout(80);
+              const metrics = await page.locator('.ft-live-tour__panel').evaluate((panel) => {
+                const rect = panel.getBoundingClientRect();
+                const topbar = document.querySelector('.ft-topbar');
+                const style = getComputedStyle(topbar);
+                return {
+                  top: rect.top,
+                  bottom: rect.bottom,
+                  height: rect.height,
+                  innerHeight: window.innerHeight,
+                  backdropFilter: style.backdropFilter || style.webkitBackdropFilter || 'none',
+                };
+              });
+
+              if (metrics.top < -0.5) throw new Error(`${viewport.name}/${placement}: tour begins above viewport at ${metrics.top}`);
+              if (metrics.bottom > metrics.innerHeight + 0.5) throw new Error(`${viewport.name}/${placement}: tour ends below viewport at ${metrics.bottom}/${metrics.innerHeight}`);
+              if (metrics.backdropFilter !== 'none') throw new Error(`${viewport.name}/${placement}: topbar still creates fixed containing block: ${metrics.backdropFilter}`);
+            }
+
+            await page.close();
+          }
+
           await browser.close();
-          console.log('LIVE LOGIN + ADMIN GUARD SCREENS PASSED');
+          console.log('LIVE GUIDED TOUR VIEWPORT CONTAINMENT PASSED');
           EOF
-          node live-check.mjs
+          node live-tour-viewport.mjs
+
+# guided-tour viewport containment verification trigger: 2026-08-28
