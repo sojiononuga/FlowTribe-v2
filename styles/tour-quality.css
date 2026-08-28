@@ -1,0 +1,22 @@
+/* Dynamic tour placement applied by tour-quality.js. */
+.ft-live-tour__panel[data-placement='top'] {
+  top: max(var(--ft-space-4), env(safe-area-inset-top));
+  bottom: auto;
+}
+
+.ft-live-tour__panel[data-placement='bottom'] {
+  top: auto;
+  bottom: max(var(--ft-space-4), env(safe-area-inset-bottom));
+}
+
+@media (max-width: 720px) {
+  .ft-live-tour__panel[data-placement='top'] {
+    top: var(--ft-space-3);
+    bottom: auto;
+  }
+
+  .ft-live-tour__panel[data-placement='bottom'] {
+    top: auto;
+    bottom: calc(var(--ft-bottomnav-height) + var(--ft-space-3));
+  }
+}
