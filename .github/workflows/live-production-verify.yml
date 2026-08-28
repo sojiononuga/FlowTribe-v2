@@ -24,9 +24,14 @@ jobs:
           set -euo pipefail
           curl -fsSL --retry 5 --retry-delay 2 "$SITE_URL/" -o /tmp/member.html
           curl -fsSL --retry 5 --retry-delay 2 "$SITE_URL/admin.html" -o /tmp/admin.html
+          curl -fsSL --retry 5 --retry-delay 2 "$SITE_URL/styles/modern-ui.css" -o /tmp/modern-ui.css
           curl -fsSL --retry 5 --retry-delay 2 "$SITE_URL/src/core/config.js" -o /tmp/config.js
           grep -q '<title>Flow Tribe</title>' /tmp/member.html
           grep -q '<title>Flow Tribe · Admin</title>' /tmp/admin.html
+          grep -q 'styles/modern-ui.css' /tmp/member.html
+          grep -q 'styles/modern-ui.css' /tmp/admin.html
+          grep -q 'grid-template-columns: repeat(12, minmax(0, 1fr))' /tmp/modern-ui.css
+          grep -q 'var(--ft-sidebar-width)' /tmp/modern-ui.css
           grep -qF "$API_URL" /tmp/config.js
 
           HEALTH="$(curl -fsSL --retry 5 --retry-delay 2 "$API_URL")"
@@ -81,3 +86,5 @@ jobs:
           console.log('LIVE LOGIN + ADMIN GUARD SCREENS PASSED');
           EOF
           node live-check.mjs
+
+# modern workspace production verification trigger: 2026-08-28
