@@ -134,7 +134,7 @@ body {
 .ft-bottomnav {
   background: color-mix(in srgb, var(--ft-bg-raised) 94%, transparent);
   border-top-color: var(--ft-border-subtle);
-  box-shadow: 0 calc(var(--ft-space-2) * -1) var(--ft-space-6) rgba(20, 51, 42, 0.08);
+  box-shadow: var(--ft-shadow-md);
 }
 
 .ft-bottomnav__item[aria-current='page'] {
