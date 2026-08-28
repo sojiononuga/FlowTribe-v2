@@ -8,7 +8,7 @@ The user-facing product is intentionally branded Griot rather than with the name
 
 ## Underlying AI technology
 
-Griot's generative conversation is powered by the **Meta Llama API**. The server-side integration uses Meta's hosted chat-completions API. The model is configurable through a protected Apps Script Script Property; the default implementation uses `Llama-4-Maverick-17B-128E-Instruct-FP8`.
+Griot's generative conversation is powered by the **Meta Model API**, using **Muse Spark**. The server-side integration uses Meta's OpenAI-compatible hosted chat-completions endpoint at `https://api.meta.ai/v1`. The model is configurable through a protected Apps Script Script Property; the current default implementation uses `muse-spark-1.2`.
 
 This provider relationship must be declared accurately in competition/submission material. It does not need to become the user-facing name of the assistant.
 
@@ -20,13 +20,13 @@ Typed and spoken input enter the same Griot conversation path:
 2. Browser speech recognition converts spoken input to text when that capability is available.
 3. The Flow Tribe client sends the message, a short recent conversation window and the current application route to the authenticated `griot.chat` action.
 4. The server constructs a deliberately minimal Flow context from the authenticated member's current direction, rhythm, constraints and recent movement.
-5. The server calls the Meta Llama API with the Griot system instructions and that bounded context.
+5. The server calls the Meta Model API with the Griot system instructions and that bounded context.
 6. Griot returns a conversational answer and, when useful, one whitelisted Flow action such as Show up, Adapt or Review direction.
 7. The same selected on-device Griot voice can speak the response and narrate the guided tour.
 
 ## Data minimisation and security
 
-The Meta Llama credential is stored only in Apps Script Script Properties and is never sent to the browser.
+The Meta Model API credential is stored only in Apps Script Script Properties and is never sent to the browser.
 
 The Griot model context intentionally excludes authentication tokens, PIN material, credentials, email addresses, phone numbers and administrative data. Conversation history is capped, strings are length-limited, model-recommended navigation is mapped through a fixed allow-list, and `griot.chat` is authenticated and rate-limited through the existing Flow Tribe security boundary.
 
@@ -38,7 +38,7 @@ Griot does not expose the operating system's full voice catalogue. Flow Tribe se
 
 An **African English** option is shown only when the device actually provides a matching African-English voice locale. Flow Tribe does not simulate an accent through pitch manipulation.
 
-Speech synthesis and browser speech recognition are device/browser capabilities; the generative conversational answer itself comes from the Meta Llama-powered Griot server path.
+Speech synthesis and browser speech recognition are device/browser capabilities; the generative conversational answer itself comes from the Meta Model API-powered Griot server path.
 
 ## Mobile treatment
 

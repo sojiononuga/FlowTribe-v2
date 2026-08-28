@@ -10,8 +10,10 @@ function assert(condition, message) {
   if (!condition) throw new Error(message);
 }
 
-assert(service.includes('https://api.llama.com/v1/chat/completions'), 'Griot must use the Meta Llama server endpoint.');
-assert(service.includes("getProperty('FT_GRIOT_LLAMA_API_KEY')"), 'Griot credential must come from Script Properties.');
+assert(service.includes('https://api.meta.ai/v1/chat/completions'), 'Griot must use the current Meta Model API endpoint.');
+assert(service.includes("DEFAULT_MODEL = 'muse-spark-1.2'"), 'Griot must default to the current Muse Spark model.');
+assert(service.includes("getProperty('FT_GRIOT_MODEL_API_KEY')") && service.includes("getProperty('FT_GRIOT_LLAMA_API_KEY')"), 'Griot credential must come from Script Properties and preserve the existing deployed key name as a compatibility fallback.');
+assert(!service.includes('https://api.llama.com/'), 'The retired Llama API endpoint must not return.');
 assert(!/Bearer\s+[A-Za-z0-9_-]{20,}/.test(service), 'Griot service must not contain a literal bearer credential.');
 assert(router.includes("'griot.chat': { capability: 'dashboard:self'"), 'griot.chat must be authenticated by the existing dashboard capability.');
 assert(manifest.oauthScopes.includes('https://www.googleapis.com/auth/script.external_request'), 'Apps Script must declare external-request scope.');
