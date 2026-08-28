@@ -1,0 +1,230 @@
+/* Meta AI + autonomous guided tour refinements. */
+
+.ft-meta-ai {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+}
+
+.ft-meta-ai__sparkle svg {
+  stroke-width: 1.7;
+}
+
+.ft-meta-ai__button[data-help-intensity='active'] {
+  box-shadow: 0 0 0 3px rgba(88, 205, 168, 0.18);
+}
+
+.ft-meta-ai__panel {
+  position: absolute;
+  z-index: calc(var(--ft-z-modal) + 4);
+  top: calc(100% + var(--ft-space-3));
+  right: 0;
+  width: min(29rem, calc(100vw - 2rem));
+  max-height: min(42rem, calc(100dvh - 5rem));
+  overflow: hidden;
+  background: #f6f4ef;
+  color: var(--ft-burgundy-900);
+  border: 1px solid var(--ft-burgundy-100);
+  border-radius: var(--ft-radius-2xl);
+  box-shadow: var(--ft-shadow-xl);
+}
+
+.ft-meta-ai__panel[hidden] { display: none; }
+
+.ft-meta-ai__head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--ft-space-3);
+  padding: var(--ft-space-5);
+  border-bottom: 1px solid var(--ft-burgundy-100);
+}
+
+.ft-meta-ai__head strong {
+  font-family: var(--ft-font-display);
+  font-size: var(--ft-text-lg);
+}
+
+.ft-meta-ai__head p {
+  margin-top: var(--ft-space-1);
+  max-width: 24rem;
+  color: var(--ft-burgundy-600);
+  font-size: var(--ft-text-xs);
+  line-height: var(--ft-leading-relaxed);
+}
+
+.ft-meta-ai__help-badge {
+  flex: 0 0 auto;
+  padding: .3rem .55rem;
+  background: var(--ft-burgundy-50);
+  border-radius: var(--ft-radius-full);
+  color: var(--ft-burgundy-700);
+  font-size: var(--ft-text-2xs);
+  font-weight: var(--ft-weight-bold);
+  white-space: nowrap;
+}
+
+.ft-meta-ai__messages {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ft-space-3);
+  min-height: 10rem;
+  max-height: 20rem;
+  overflow-y: auto;
+  padding: var(--ft-space-5);
+}
+
+.ft-meta-ai__message {
+  max-width: 92%;
+  padding: var(--ft-space-3) var(--ft-space-4);
+  border-radius: var(--ft-radius-xl);
+  font-size: var(--ft-text-sm);
+  line-height: var(--ft-leading-relaxed);
+}
+
+.ft-meta-ai__message--meta {
+  align-self: flex-start;
+  background: white;
+  border: 1px solid var(--ft-burgundy-100);
+}
+
+.ft-meta-ai__message--user {
+  align-self: flex-end;
+  background: var(--ft-burgundy-800);
+  color: #f6f4ef;
+}
+
+.ft-meta-ai__action {
+  margin-top: var(--ft-space-3);
+  padding: .55rem .8rem;
+  background: var(--ft-burgundy-800);
+  color: #f6f4ef;
+  border: 0;
+  border-radius: var(--ft-radius-full);
+  font-size: var(--ft-text-xs);
+  font-weight: var(--ft-weight-semibold);
+  cursor: pointer;
+}
+
+.ft-meta-ai__quick {
+  display: flex;
+  gap: var(--ft-space-2);
+  padding: 0 var(--ft-space-5) var(--ft-space-4);
+  overflow-x: auto;
+}
+
+.ft-meta-ai__quick-button {
+  flex: 0 0 auto;
+  padding: .45rem .7rem;
+  background: transparent;
+  color: var(--ft-burgundy-700);
+  border: 1px solid var(--ft-burgundy-200);
+  border-radius: var(--ft-radius-full);
+  font-size: var(--ft-text-xs);
+  cursor: pointer;
+}
+
+.ft-meta-ai__composer {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: var(--ft-space-2);
+  padding: var(--ft-space-4) var(--ft-space-5) var(--ft-space-5);
+  border-top: 1px solid var(--ft-burgundy-100);
+}
+
+.ft-meta-ai__input {
+  min-width: 0;
+  min-height: 2.75rem;
+  padding: 0 var(--ft-space-3);
+  background: white;
+  color: var(--ft-burgundy-900);
+  border: 1px solid var(--ft-burgundy-200);
+  border-radius: var(--ft-radius-full);
+}
+
+.ft-meta-ai__send {
+  min-height: 2.75rem;
+  padding-inline: var(--ft-space-4);
+  background: var(--ft-burgundy-800);
+  color: #f6f4ef;
+  border: 0;
+  border-radius: var(--ft-radius-full);
+  font-weight: var(--ft-weight-semibold);
+  cursor: pointer;
+}
+
+.ft-meta-ai__nudge {
+  position: absolute;
+  top: calc(100% + var(--ft-space-3));
+  right: 0;
+  z-index: calc(var(--ft-z-modal) + 1);
+  width: min(20rem, calc(100vw - 2rem));
+  padding: var(--ft-space-3) var(--ft-space-4);
+  background: #f6f4ef;
+  color: var(--ft-burgundy-900);
+  border: 1px solid rgba(88, 205, 168, 0.6);
+  border-radius: var(--ft-radius-xl);
+  box-shadow: var(--ft-shadow-lg);
+  text-align: left;
+  font-size: var(--ft-text-xs);
+  line-height: var(--ft-leading-relaxed);
+  cursor: pointer;
+}
+
+.ft-meta-ai__nudge[hidden] { display: none; }
+
+/* The tour card must always fit inside the current visual viewport. The old
+   bottom-anchored card could grow above the top edge on short browser windows. */
+.ft-live-tour__panel {
+  top: max(var(--ft-space-4), env(safe-area-inset-top));
+  right: var(--ft-space-5);
+  bottom: auto;
+  width: min(31rem, calc(100vw - 2rem));
+  max-height: calc(100dvh - (2 * var(--ft-space-4)));
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+.ft-live-tour__footer {
+  position: sticky;
+  bottom: calc(-1 * var(--ft-space-6));
+  margin-inline: calc(-1 * var(--ft-space-6));
+  margin-bottom: calc(-1 * var(--ft-space-6));
+  padding: var(--ft-space-4) var(--ft-space-6) var(--ft-space-6);
+  background: linear-gradient(to bottom, rgba(246,244,239,0), #f6f4ef 28%);
+}
+
+@media (max-width: 900px) {
+  .ft-assist__label { font-size: var(--ft-text-2xs); }
+  .ft-meta-ai__panel {
+    position: fixed;
+    top: max(var(--ft-space-3), env(safe-area-inset-top));
+    right: var(--ft-space-3);
+    left: var(--ft-space-3);
+    width: auto;
+    max-height: calc(100dvh - var(--ft-bottomnav-height) - (2 * var(--ft-space-3)));
+  }
+}
+
+@media (max-width: 720px) {
+  .ft-meta-ai__button .ft-assist__label { display: inline; }
+  .ft-meta-ai__panel { bottom: calc(var(--ft-bottomnav-height) + var(--ft-space-3)); }
+  .ft-meta-ai__messages { max-height: 32vh; }
+  .ft-meta-ai__head { flex-direction: column; }
+
+  .ft-live-tour__panel {
+    top: max(var(--ft-space-3), env(safe-area-inset-top));
+    right: var(--ft-space-3);
+    bottom: auto;
+    width: calc(100vw - var(--ft-space-6));
+    max-height: calc(100dvh - var(--ft-bottomnav-height) - (2 * var(--ft-space-3)));
+    padding: var(--ft-space-5);
+  }
+
+  .ft-live-tour__footer {
+    bottom: calc(-1 * var(--ft-space-5));
+    margin-inline: calc(-1 * var(--ft-space-5));
+    margin-bottom: calc(-1 * var(--ft-space-5));
+    padding: var(--ft-space-4) var(--ft-space-5) var(--ft-space-5);
+  }
+}
