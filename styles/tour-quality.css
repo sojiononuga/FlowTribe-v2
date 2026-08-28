@@ -1,4 +1,22 @@
-/* Dynamic tour placement applied by tour-quality.js. */
+/* Dynamic tour placement applied by tour-quality.js.
+
+   The tour node lives inside the top-bar help controls. The top bar normally
+   uses backdrop-filter, which makes it a containing block for fixed descendants
+   in Chromium/WebKit. That caused the fixed tour card to be positioned against
+   the sticky header instead of the viewport, pushing most of the guide above
+   the screen. While a tour is open, remove that containing-block trigger so the
+   guide is genuinely viewport-fixed. */
+.ft-live-tour-open .ft-topbar {
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+
+.ft-live-tour__panel {
+  max-height: calc(100dvh - 2rem);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
 .ft-live-tour__panel[data-placement='top'] {
   top: max(var(--ft-space-4), env(safe-area-inset-top));
   bottom: auto;
@@ -10,13 +28,17 @@
 }
 
 @media (max-width: 720px) {
+  .ft-live-tour__panel {
+    max-height: calc(100dvh - var(--ft-bottom-nav-height) - var(--ft-space-6));
+  }
+
   .ft-live-tour__panel[data-placement='top'] {
-    top: var(--ft-space-3);
+    top: max(var(--ft-space-3), env(safe-area-inset-top));
     bottom: auto;
   }
 
   .ft-live-tour__panel[data-placement='bottom'] {
     top: auto;
-    bottom: calc(var(--ft-bottom-nav-height) + var(--ft-space-3));
+    bottom: calc(var(--ft-bottom-nav-height) + var(--ft-space-3) + env(safe-area-inset-bottom));
   }
 }
