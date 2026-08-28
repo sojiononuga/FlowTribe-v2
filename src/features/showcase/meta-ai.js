@@ -16,17 +16,26 @@ export function MetaAiControl({ status } = {}) {
     help: { intensity: 'standard', reason: 'I will learn from your Flow as you use it.' },
     loading: false,
     lastLoadedAt: 0,
+    history: [],
+    lastIntent: null,
   };
 
   const messages = el('div', { class: 'ft-meta-ai__messages', attrs: { role: 'log', 'aria-live': 'polite' } });
   const helpBadge = el('span', { class: 'ft-meta-ai__help-badge', text: 'Learning your Flow' });
-  const input = el('input', {
+  const input = el('textarea', {
     class: 'ft-meta-ai__input',
     attrs: {
-      type: 'text',
-      placeholder: 'Ask about your Flow, progress, date, or what to do next…',
+      rows: '2',
+      placeholder: 'Ask about your Flow, what is stuck, or what to do next…',
       'aria-label': 'Ask Meta AI a question',
-      autocomplete: 'off',
+    },
+    on: {
+      keydown: (event) => {
+        if (event.key === 'Enter' && !event.shiftKey) {
+          event.preventDefault();
+          ask(input.value);
+        }
+      },
     },
   });
 
@@ -37,7 +46,7 @@ export function MetaAiControl({ status } = {}) {
     el('div', { class: 'ft-meta-ai__head' }, [
       el('div', {}, [
         el('strong', { text: 'Meta AI' }),
-        el('p', { text: 'Ask about your Flow. I answer from your actual progress and context.' }),
+        el('p', { text: 'Ask about your Flow. I use your current progress and the conversation so the help stays relevant.' }),
       ]),
       helpBadge,
     ]),
@@ -45,8 +54,8 @@ export function MetaAiControl({ status } = {}) {
     el('div', { class: 'ft-meta-ai__quick' }, [
       quick('What do I need to do?'),
       quick('Am I behind?'),
-      quick('What should I do next?'),
-      quick('What can Flow do?'),
+      quick('I am struggling'),
+      quick('How can Flow help me?'),
     ]),
     el('form', {
       class: 'ft-meta-ai__composer',
@@ -101,7 +110,7 @@ export function MetaAiControl({ status } = {}) {
     if (!messages.childElementCount) {
       addMeta(fromNudge
         ? proactiveOpening(state)
-        : `Hi. I’m Meta AI. I can explain Flow, tell you where you are, show what remains this week, help you recover when you’re slipping, and take you to the right part of the app.`);
+        : 'Hi. Ask me what is left, what to do next, whether you are slipping, or simply tell me what is getting in the way. I will work from your current Flow rather than make you translate the problem into app language.');
     }
     input.focus();
   }
@@ -141,6 +150,9 @@ export function MetaAiControl({ status } = {}) {
     addUser(question);
     await refreshContext();
     const answer = answerQuestion(question, state);
+    state.lastIntent = answer.intent || state.lastIntent;
+    state.history.push({ role: 'user', text: question }, { role: 'assistant', text: answer.text });
+    state.history = state.history.slice(-12);
     addMeta(answer.text, answer.action);
     if (status) status.textContent = 'Meta AI answered your question.';
   }
@@ -159,7 +171,16 @@ export function MetaAiControl({ status } = {}) {
         class: 'ft-meta-ai__action',
         attrs: { type: 'button' },
         text: action.label,
-        on: { click: () => { close(); navigate(action.route); } },
+        on: {
+          click: () => {
+            close();
+            if (action.event === 'tour') {
+              document.dispatchEvent(new CustomEvent('flowtribe:tour-open'));
+              return;
+            }
+            if (action.route && currentRoute() !== action.route) navigate(action.route);
+          },
+        },
       }));
     }
     messages.append(el('div', { class: 'ft-meta-ai__message ft-meta-ai__message--meta' }, parts));
@@ -194,49 +215,77 @@ function answerQuestion(question, state) {
   const remaining = Math.max(0, Number(week.weeklyGoal || 0) - Number(week.postsThisWeek || 0));
   const nextAction = member.showingUp || 'one meaningful action that moves your goal';
   const goal = member.goalTitle || 'your chosen direction';
+  const constraint = String(member.constraints || '').trim();
+  const previous = state.history[state.history.length - 1]?.text || '';
+  const followUp = /^(what if|and if|but|still|why|how about|what about|then|so)\b/.test(q) || q.length < 34;
 
   if (/\b(date|day|today|time)\b/.test(q)) {
     const now = new Date();
-    return { text: `Today is ${new Intl.DateTimeFormat(undefined, { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }).format(now)}. The time is ${new Intl.DateTimeFormat(undefined, { hour: '2-digit', minute: '2-digit' }).format(now)}.` };
+    return { intent: 'date', text: `Today is ${new Intl.DateTimeFormat(undefined, { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }).format(now)}. The time is ${new Intl.DateTimeFormat(undefined, { hour: '2-digit', minute: '2-digit' }).format(now)}.` };
+  }
+
+  // Explicit questions about Flow/the app must outrank conversational follow-up
+  // context. Otherwise a short product question asked after a recovery exchange
+  // is incorrectly interpreted as another recovery follow-up.
+  if (/what can flow|what is flow|what.*app|how.*app|how can flow|help me understand/.test(q)) {
+    return {
+      intent: 'product',
+      text: 'Flow Tribe is for keeping meaningful goals alive when real life changes the original plan. It keeps the direction visible, turns progress into a credible next action, records lightweight evidence, adapts the route when conditions change, treats recovery as progress, and uses Tribe, milestones and levels to sustain momentum without punishing interruption.',
+      action: { label: 'Show me how it works', event: 'tour' },
+    };
+  }
+
+  if (/struggl|stuck|overwhelm|exhaust|cant |cannot |too hard|not working|giving up|still difficult|still hard/.test(q) || (followUp && state.lastIntent === 'recovery')) {
+    const constraintText = constraint ? ` You have already told Flow to plan around “${constraint}”, so that constraint should stay in the decision.` : '';
+    return {
+      intent: 'recovery',
+      text: `Then the answer is not to push harder at the same plan. Keep the destination — ${goal} — and make the next move smaller, different, or later until it becomes credible again.${constraintText} Your current definition of showing up is “${nextAction}”. If even that is too much right now, tell Flow what changed and let Adapt propose a recovery move you can actually do.`,
+      action: { label: 'Work out a recovery path', route: '/adapt' },
+    };
   }
 
   if (/outstanding|left|remain|need to do|what do i need|tasks?/.test(q)) {
-    if (!data) return { text: 'I need your signed-in Flow data before I can tell you what remains.' };
+    if (!data) return { intent: 'work', text: 'I need your signed-in Flow data before I can tell you what remains.' };
     if (remaining === 0) {
       return {
-        text: `You have reached this week’s target of ${week.weeklyGoal} meaningful moves. Your next useful action is still “${nextAction}” if you want to keep momentum going.`,
+        intent: 'work',
+        text: `You have reached this week’s target of ${week.weeklyGoal} meaningful moves. You do not owe Flow extra work just to protect the number. If you want to keep moving, your current next action is “${nextAction}”.`,
         action: { label: 'Show up', route: '/submit' },
       };
     }
     return {
-      text: `You have ${remaining} of ${week.weeklyGoal} meaningful ${remaining === 1 ? 'move' : 'moves'} still to complete this week. Your current next action is “${nextAction}”. Flow does not currently store a separate dated task list, so I will not invent one.`,
+      intent: 'work',
+      text: `You have ${remaining} of ${week.weeklyGoal} meaningful ${remaining === 1 ? 'move' : 'moves'} still to complete this week. Your current next action is “${nextAction}”. Flow does not currently keep a separate dated task register, so I will not pretend there are task records I cannot see.`,
       action: { label: 'Do the next action', route: '/submit' },
     };
   }
 
   if (/behind|late|running late|missed|slipping|catch up|recover/.test(q)) {
-    const context = member.constraints ? ` You have also told Flow to plan around: ${member.constraints}.` : '';
+    const context = constraint ? ` You have also told Flow to plan around “${constraint}”.` : '';
     return {
-      text: `Don’t try to repair the whole plan at once. Preserve the goal — ${goal} — and reduce the next move until it is credible today.${context} Use Flow Adapt to tell me what changed; Flow will propose a smaller recovery path and you choose whether to accept it.`,
+      intent: 'recovery',
+      text: `You do not need to repair the whole plan at once. Preserve the goal — ${goal} — and reduce the next move until it is credible today.${context} Flow Adapt is for exactly this situation: tell it what changed, inspect the revised route, and accept only the recovery move that still makes sense.`,
       action: { label: 'Adapt this path', route: '/adapt' },
     };
   }
 
   if (/next|what should i do|complete this|how do i complete|how do i do/.test(q)) {
     return {
-      text: `Your next action is “${nextAction}”. Make it concrete enough to finish in one sitting, do that piece, then record it in Show up. If the action is no longer realistic, adapt the path instead of forcing the old plan.`,
+      intent: 'next',
+      text: `Your current next action is “${nextAction}”. Do the smallest complete version of that action in one sitting, then record what moved. If that action is no longer realistic, do not force it — adapt the path instead.`,
       action: { label: 'Show up now', route: '/submit' },
     };
   }
 
   if (/progress|momentum|streak|how am i doing|status/.test(q)) {
-    if (!data) return { text: 'I need your signed-in Flow data before I can read your progress.' };
-    return { text: `You have recorded ${week.postsThisWeek || 0} of ${week.weeklyGoal || 0} meaningful moves this week. Your current return streak is ${stats.currentWeekStreak || 0} ${Number(stats.currentWeekStreak || 0) === 1 ? 'week' : 'weeks'}, with ${stats.allTimePosts || 0} lifetime actions. My current help setting is ${labelIntensity(state.help.intensity).toLowerCase()} because ${state.help.reason}` };
+    if (!data) return { intent: 'progress', text: 'I need your signed-in Flow data before I can read your progress.' };
+    return { intent: 'progress', text: `You have recorded ${week.postsThisWeek || 0} of ${week.weeklyGoal || 0} meaningful moves this week. Your current return streak is ${stats.currentWeekStreak || 0} ${Number(stats.currentWeekStreak || 0) === 1 ? 'week' : 'weeks'}, with ${stats.allTimePosts || 0} lifetime actions. I am currently using ${labelIntensity(state.help.intensity).toLowerCase()} help because ${state.help.reason}` };
   }
 
   if (/goal|direction|destination/.test(q)) {
     return {
-      text: `Your current direction is “${goal}”. Flow keeps the destination visible while allowing the route to change when reality changes.`,
+      intent: 'goal',
+      text: `Your current direction is “${goal}”. Flow keeps that destination visible while allowing the route to change when reality changes.`,
       action: { label: 'Review direction', route: '/direction' },
     };
   }
@@ -245,34 +294,40 @@ function answerQuestion(question, state) {
     const level = data?.level?.name || 'your current Flow Level';
     const earned = data?.milestones?.totalEarned;
     return {
-      text: `You are at ${level}${Number.isFinite(Number(earned)) ? ` and have earned ${earned} milestones` : ''}. Milestones recognise meaningful patterns of movement and recovery; Levels show how your relationship with Flow is developing over time.`,
+      intent: 'milestone',
+      text: `You are at ${level}${Number.isFinite(Number(earned)) ? ` and have earned ${earned} milestones` : ''}. Milestones recognise meaningful patterns of movement and recovery; Levels show how your relationship with Flow develops over time.`,
       action: { label: 'See milestones', route: '/milestones' },
     };
   }
 
   if (/tribe|leaderboard|community|people/.test(q)) {
     return {
-      text: 'The Tribe makes movement visible across the community so people can encourage return and momentum. It is not designed to punish people for falling behind.',
+      intent: 'tribe',
+      text: 'The Tribe makes movement visible across the community so people can encourage return and momentum. It is designed to make progress social without turning people into a public failure table.',
       action: { label: 'Open Tribe', route: '/leaderboard' },
     };
   }
 
   if (/voice|speak|talk|narrat/.test(q)) {
-    return { text: 'Use Voice in the header to choose an available device voice, change speed and pitch, preview it, and turn guided-tour narration on or off.' };
+    return { intent: 'voice', text: 'Use Voice in the header to choose an available device voice, change speed and pitch, preview it, and turn guided-tour narration on or off.' };
   }
 
-  if (/what can flow|what is flow|what.*app|how.*work|help me understand/.test(q)) {
+  if (/why\b/.test(q) && state.lastIntent) {
     return {
-      text: 'Flow Tribe helps you keep meaningful goals moving when life changes the plan. It keeps your direction visible, reduces progress to useful next actions, records evidence without heavy admin, adapts the route when conditions change, makes recovery part of progress, and adds Tribe, milestones and levels for sustained momentum.',
-      action: { label: 'Show me round', route: '/dashboard' },
+      intent: state.lastIntent,
+      text: `Because Flow is trying to protect useful movement rather than force compliance with an old plan. ${previous ? `The last thing we were working from was: “${previous.slice(0, 160)}${previous.length > 160 ? '…' : ''}”` : ''}`.trim(),
     };
   }
 
   if (/help|what can you|meta ai|ask/.test(q)) {
-    return { text: 'Ask me about your next action, what remains this week, whether you are slipping, how to recover, your goal, progress, streak, milestones, the Tribe, today’s date, or where a Flow feature lives. I stay grounded in the Flow data the app actually has.' };
+    return { intent: 'help', text: 'You do not need to phrase things as commands. Tell me what is happening — for example, “I have no energy today”, “I missed two days”, “I do not know where to start”, or “I have finished the target but want to keep going”. I will relate that back to your current Flow.' };
   }
 
-  return { text: 'I can help with your actual Flow rather than guess. Try asking “What do I need to do?”, “Am I behind?”, “What should I do next?”, “What is my progress?”, “What date is it?”, or “How does Flow Adapt work?”' };
+  return {
+    intent: 'conversation',
+    text: `I do not want to turn that into a canned answer. Tell me what part is difficult — the goal itself, the next action “${nextAction}”, the time available, or something else that changed — and I will help you work out the next credible move.`,
+    action: { label: 'Adapt what changed', route: '/adapt' },
+  };
 }
 
 function assessHelp(data) {
@@ -317,6 +372,11 @@ function labelIntensity(value) {
 
 function normalise(value) {
   return String(value || '').toLowerCase().replace(/[’']/g, '').replace(/\s+/g, ' ').trim();
+}
+
+function currentRoute() {
+  const hash = window.location.hash || '#/dashboard';
+  return hash.startsWith('#') ? hash.slice(1).split('?')[0] : hash;
 }
 
 function isMemberRoute() {
