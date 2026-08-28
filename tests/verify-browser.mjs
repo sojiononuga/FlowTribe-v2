@@ -141,6 +141,13 @@ async function verifyHelpQuality(browser) {
   if (!tourTarget.calendarAlias) throw new Error('Help quality: movement calendar compatibility target was not installed.');
   if (!['top', 'bottom'].includes(tourTarget.placement)) throw new Error('Help quality: tour panel did not choose a viewport side.');
 
+  // The real product does not keep the tour dialog open while opening Meta.
+  // Close the isolated tour fixture before exercising the independent Meta surface.
+  await page.evaluate(() => {
+    document.querySelector('.ft-live-tour').hidden = true;
+  });
+  await page.waitForTimeout(40);
+
   await page.getByRole('button', { name: 'Ask Meta AI' }).click();
   await page.getByLabel('Ask Meta AI a question').fill('What if I am still struggling?');
   await page.getByRole('button', { name: 'Ask', exact: true }).click();
