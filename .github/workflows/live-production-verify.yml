@@ -54,6 +54,7 @@ jobs:
 
             await page.evaluate(() => {
               const topbar = document.createElement('header');
+              topbar.id = 'viewport-test-topbar';
               topbar.className = 'ft-topbar';
               topbar.style.position = 'fixed';
               topbar.style.inset = '0 0 auto 0';
@@ -63,6 +64,7 @@ jobs:
               const tour = document.createElement('div');
               tour.className = 'ft-live-tour';
               const panel = document.createElement('section');
+              panel.id = 'viewport-test-panel';
               panel.className = 'ft-live-tour__panel';
               panel.dataset.placement = 'top';
               panel.innerHTML = `
@@ -78,12 +80,13 @@ jobs:
               document.documentElement.classList.add('ft-live-tour-open');
             });
 
+            const panel = page.locator('#viewport-test-panel');
             for (const placement of ['top', 'bottom']) {
-              await page.locator('.ft-live-tour__panel').evaluate((panel, value) => { panel.dataset.placement = value; }, placement);
+              await panel.evaluate((node, value) => { node.dataset.placement = value; }, placement);
               await page.waitForTimeout(80);
-              const metrics = await page.locator('.ft-live-tour__panel').evaluate((panel) => {
-                const rect = panel.getBoundingClientRect();
-                const topbar = document.querySelector('.ft-topbar');
+              const metrics = await panel.evaluate((node) => {
+                const rect = node.getBoundingClientRect();
+                const topbar = document.querySelector('#viewport-test-topbar');
                 const style = getComputedStyle(topbar);
                 return {
                   top: rect.top,
@@ -108,3 +111,4 @@ jobs:
           node live-tour-viewport.mjs
 
 # guided-tour viewport containment verification trigger: 2026-08-28
+# scoped fixture rerun: 2026-08-28
