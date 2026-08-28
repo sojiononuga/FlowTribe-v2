@@ -17,6 +17,6 @@
 
   .ft-live-tour__panel[data-placement='bottom'] {
     top: auto;
-    bottom: calc(var(--ft-bottomnav-height) + var(--ft-space-3));
+    bottom: calc(var(--ft-bottom-nav-height) + var(--ft-space-3));
   }
 }
