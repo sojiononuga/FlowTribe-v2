@@ -11,31 +11,41 @@ const TARGETS = {
  *
  * The tour predates several of the current view class names. When a stale
  * selector resolved to #main it outlined the entire workspace, and the old
- * movement selector waited five seconds before falling back. This small guard
- * keeps the tour coupled to the visible feature without changing product data
- * or route behaviour.
+ * movement selector waited five seconds before falling back. This guard keeps
+ * the tour coupled to the visible feature even when a route renders its data
+ * asynchronously.
  */
 export function installTourQualityGuards() {
+  let lastTarget = null;
+
   const retarget = () => {
     // Compatibility alias for the tour's original movement-history selector.
     document.querySelectorAll('.ft-calendar:not(.ft-activity-calendar)').forEach((node) => {
       node.classList.add('ft-activity-calendar');
     });
 
+    const liveTour = document.querySelector('.ft-live-tour:not([hidden])');
     const main = document.querySelector('#main.ft-live-tour-target');
-    if (!main) return;
+    if (main) main.classList.remove('ft-live-tour-target');
 
-    const route = currentRoute();
-    const selector = TARGETS[route];
-    const target = selector ? document.querySelector(selector) : null;
-    if (!target || target === main) {
-      main.classList.remove('ft-live-tour-target');
+    if (!liveTour) {
+      if (lastTarget) lastTarget.classList.remove('ft-live-tour-target');
+      lastTarget = null;
       return;
     }
 
-    main.classList.remove('ft-live-tour-target');
-    target.classList.add('ft-live-tour-target');
-    target.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'nearest' });
+    const selector = TARGETS[currentRoute()];
+    if (!selector) return;
+
+    const target = document.querySelector(selector);
+    if (!target) return;
+
+    if (lastTarget && lastTarget !== target) lastTarget.classList.remove('ft-live-tour-target');
+    if (!target.classList.contains('ft-live-tour-target')) {
+      target.classList.add('ft-live-tour-target');
+      target.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'nearest' });
+    }
+    lastTarget = target;
   };
 
   const observer = new MutationObserver(retarget);
@@ -43,7 +53,7 @@ export function installTourQualityGuards() {
     subtree: true,
     childList: true,
     attributes: true,
-    attributeFilter: ['class'],
+    attributeFilter: ['class', 'hidden'],
   });
 
   document.addEventListener('flowtribe:tour-open', () => {
