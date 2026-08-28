@@ -38,6 +38,7 @@ jobs:
             appsscript/repositories/Repositories.gs
             appsscript/services/CoreServices.gs
             appsscript/services/DomainServices.gs
+            appsscript/services/GriotService.gs
             appsscript/middleware/Middleware.gs
             appsscript/orchestrators/Orchestrators.gs
             appsscript/controllers/Controllers.gs

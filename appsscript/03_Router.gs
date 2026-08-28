@@ -47,6 +47,9 @@ function getActionTable_() {
     'member.updateGoal': { capability: 'profile:update:self', handler: MemberController.updateGoal },
     'member.profile': { capability: 'profile:read:self', handler: MemberController.profile },
 
+    // --- Griot conversational intelligence ---
+    'griot.chat': { capability: 'dashboard:self', handler: GriotService.chat },
+
     // --- Milestones and levels ---
     'milestones.list': { capability: 'dashboard:self', handler: MemberController.milestones },
     'milestones.markSeen': { capability: 'dashboard:self', handler: MemberController.markMilestonesSeen },

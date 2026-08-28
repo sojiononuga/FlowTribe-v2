@@ -1,8 +1,8 @@
 import { el, icon } from '../../core/dom.js';
 import { navigate } from '../../app/navigation.js';
-import { MetaAiControl } from './meta-ai.js';
+import { GriotControl } from './meta-ai.js';
 
-const VOICE_STORAGE_KEY = 'flowtribe.voice.v1';
+const VOICE_STORAGE_KEY = 'flowtribe.voice.v2';
 
 const MIC_PATHS = [
   'M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3z',
@@ -102,22 +102,40 @@ const TOUR_STEPS = [
     narration: 'This is your profile. Your context helps Flow work around your reality, and you can change it as your life changes. The product is supposed to adapt to you, not force you to keep serving an old version of the plan.',
   },
   {
-    route: '/dashboard', selector: '.ft-meta-ai__button', eyebrow: '15 · META AI',
-    title: 'Ask Meta AI about your actual Flow.',
-    body: 'Meta AI can answer questions such as what remains this week, what to do next, whether you are slipping, today’s date, how to recover and where a feature lives.',
-    narration: 'Meta AI has a continuous presence in the header. You can ask what remains, what you should do next, whether you are behind, what today’s date is, how to recover when a plan is late, what your goal or progress is, and where a Flow feature lives. It stays grounded in the Flow data the app actually has.',
+    route: '/dashboard', selector: '.ft-griot__button', eyebrow: '15 · GRIOT',
+    title: 'Talk to Griot about your actual Flow.',
+    body: 'Griot is the intelligent companion inside Flow Tribe. Type or speak naturally; the same conversation stays grounded in your direction, movement, constraints and history.',
+    narration: 'Griot is the intelligent companion inside Flow Tribe. You can type or speak naturally, and both routes enter the same conversation. Griot works from your actual direction, movement, constraints and recent evidence, so you can talk about what is happening without translating your life into app commands.',
   },
   {
-    route: '/dashboard', selector: '.ft-meta-ai__button', eyebrow: '16 · ADAPTIVE HELP',
-    title: 'Flow changes the intensity of help, not just the plan.',
+    route: '/dashboard', selector: '.ft-griot__button', eyebrow: '16 · ADAPTIVE HELP',
+    title: 'Griot changes the intensity of help, not just the plan.',
     body: 'Strong momentum means lighter-touch help. Mixed movement gets contextual guidance. Constraints or low recent movement can trigger more active recovery prompts.',
-    narration: 'Flow also adapts the amount of help it offers. When your current rhythm is strong, it stays light touch. When movement is mixed, it offers normal contextual guidance. When constraints are active or recent movement is very low, Meta AI can become more proactive and offer a recovery prompt. The aim is enough help without crowding you.',
+    narration: 'Flow also adapts the amount of help Griot offers. When your current rhythm is strong, Griot stays light touch. When movement is mixed, it offers contextual guidance. When constraints are active or recent movement is very low, Griot can become more proactive. The aim is enough help without crowding you.',
   },
   {
     route: '/dashboard', selector: '.ft-assist', eyebrow: '17 · VOICE AND GUIDED HELP',
-    title: 'You can choose how Flow speaks and let the tour run itself.',
-    body: 'Voice settings control voice, speed, pitch and narration. Show me round now progresses automatically; Pause, Back and Next now are there only when you want control.',
-    narration: 'Finally, the Voice control lets you choose an available voice on your device, adjust speed and pitch, and preview it. Show me round is now self running. It moves through Flow and speaks as it goes. You can pause, go back, replay or jump ahead, but you no longer have to press Next to make the tour continue. That is Flow Tribe: direction, useful action, evidence, adaptation, recovery, momentum and Tribe, with help that changes as your needs change.',
+    title: 'Griot speaks with a small set of voices chosen for this experience.',
+    body: 'Instead of a long device-voice catalogue, Flow offers a few context-appropriate voices. The same chosen voice reads Griot replies and the guided tour.',
+    narration: 'Finally, the Voice control gives you a small set of voices selected for Flow rather than a long operating system catalogue. The same chosen voice can read Griot replies and guide this tour. Show me round remains self running, and you can pause, go back, replay or jump ahead whenever you want control.',
+  },
+];
+
+const VOICE_PROFILES = [
+  {
+    id: 'warm', label: 'Griot — Warm & grounded',
+    languages: ['en-NG', 'en-GB', 'en-IE', 'en-AU', 'en-US'],
+    names: ['serena', 'samantha', 'ava', 'karen', 'moira', 'daniel', 'google uk english female', 'microsoft sonia'],
+  },
+  {
+    id: 'calm', label: 'Calm Guide',
+    languages: ['en-GB', 'en-IE', 'en-AU', 'en-US'],
+    names: ['serena', 'moira', 'samantha', 'tessa', 'ava', 'microsoft libby', 'google uk english female'],
+  },
+  {
+    id: 'coach', label: 'Clear Coach',
+    languages: ['en-GB', 'en-US', 'en-AU'],
+    names: ['daniel', 'alex', 'aaron', 'microsoft ryan', 'google uk english male', 'arthur'],
   },
 ];
 
@@ -126,11 +144,11 @@ export function MemberAssistControls() {
   const status = el('span', { class: 'ft-assist__status', attrs: { role: 'status', 'aria-live': 'polite' } });
   const voicePanel = VoicePanel(settings, status);
   const tour = ActiveGuidedTour(settings, status);
-  const metaAi = MetaAiControl({ status });
+  const griot = GriotControl({ status });
 
   const voice = el('button', {
     class: 'ft-assist__button',
-    attrs: { type: 'button', 'aria-label': 'Voice settings', 'aria-expanded': 'false' },
+    attrs: { type: 'button', 'aria-label': 'Griot voice settings', 'aria-expanded': 'false' },
     on: {
       click: () => {
         const opening = voicePanel.hidden;
@@ -154,7 +172,7 @@ export function MemberAssistControls() {
   ]);
 
   const node = el('div', { class: 'ft-assist', attrs: { 'aria-label': 'Flow help' } }, [
-    metaAi,
+    griot,
     voice,
     tourButton,
     status,
@@ -169,13 +187,19 @@ export function MemberAssistControls() {
     }
   });
 
+  document.addEventListener('flowtribe:griot-speak', (event) => {
+    const text = String(event.detail?.text || '').trim();
+    if (text) speakText(text, settings, status);
+  });
+
+  document.addEventListener('flowtribe:tour-open', () => tour.open());
+
   return node;
 }
 
 function VoicePanel(settings, status) {
-  const voiceSelect = el('select', { class: 'ft-voice-panel__select', attrs: { 'aria-label': 'Choose voice' } });
+  const voiceSelect = el('select', { class: 'ft-voice-panel__select', attrs: { 'aria-label': 'Choose Griot voice' } });
   const rateValue = el('span', { class: 'ft-voice-panel__value', text: `${settings.rate.toFixed(2)}×` });
-  const pitchValue = el('span', { class: 'ft-voice-panel__value', text: settings.pitch.toFixed(2) });
   const narration = el('input', {
     attrs: { type: 'checkbox', checked: settings.narration ? '' : null, 'aria-label': 'Speak guided tour' },
     on: { change: (event) => { settings.narration = event.target.checked; saveVoiceSettings(settings); } },
@@ -183,23 +207,11 @@ function VoicePanel(settings, status) {
 
   const rate = el('input', {
     class: 'ft-voice-panel__range',
-    attrs: { type: 'range', min: '0.7', max: '1.3', step: '0.05', value: String(settings.rate), 'aria-label': 'Voice speed' },
+    attrs: { type: 'range', min: '0.8', max: '1.15', step: '0.05', value: String(settings.rate), 'aria-label': 'Voice speed' },
     on: {
       input: (event) => {
         settings.rate = Number(event.target.value);
         rateValue.textContent = `${settings.rate.toFixed(2)}×`;
-        saveVoiceSettings(settings);
-      },
-    },
-  });
-
-  const pitch = el('input', {
-    class: 'ft-voice-panel__range',
-    attrs: { type: 'range', min: '0.7', max: '1.3', step: '0.05', value: String(settings.pitch), 'aria-label': 'Voice pitch' },
-    on: {
-      input: (event) => {
-        settings.pitch = Number(event.target.value);
-        pitchValue.textContent = settings.pitch.toFixed(2);
         saveVoiceSettings(settings);
       },
     },
@@ -213,21 +225,18 @@ function VoicePanel(settings, status) {
   const preview = el('button', {
     class: 'ft-voice-panel__preview',
     attrs: { type: 'button' },
-    text: 'Preview this voice',
-    on: { click: () => speakText('Hello. I am the Flow Tribe guide. I will help you keep moving when the plan changes.', settings, status) },
+    text: 'Hear this voice',
+    on: { click: () => speakText('Hello. I am Griot. Tell me what changed, and we will work out the next credible move together.', settings, status) },
   });
 
   const panel = el('div', { class: 'ft-voice-panel', attrs: { hidden: true } }, [
     el('div', { class: 'ft-voice-panel__head' }, [
-      el('strong', { text: 'Flow voice' }),
-      el('span', { text: 'Choose how Flow speaks to you.' }),
+      el('strong', { text: 'Griot voice' }),
+      el('span', { text: 'A small set chosen for warmth, clarity and calm.' }),
     ]),
     el('label', { class: 'ft-voice-panel__field' }, [el('span', { text: 'Voice' }), voiceSelect]),
     el('label', { class: 'ft-voice-panel__field' }, [
-      el('span', { class: 'ft-row ft-row--between' }, [el('span', { text: 'Speed' }), rateValue]), rate,
-    ]),
-    el('label', { class: 'ft-voice-panel__field' }, [
-      el('span', { class: 'ft-row ft-row--between' }, [el('span', { text: 'Pitch' }), pitchValue]), pitch,
+      el('span', { class: 'ft-row ft-row--between' }, [el('span', { text: 'Pace' }), rateValue]), rate,
     ]),
     el('label', { class: 'ft-voice-panel__toggle' }, [narration, el('span', { text: 'Speak the guided tour' })]),
     preview,
@@ -240,22 +249,90 @@ function VoicePanel(settings, status) {
       preview.disabled = true;
       return;
     }
+
     const voices = window.speechSynthesis.getVoices();
-    const options = [el('option', { attrs: { value: '' }, text: 'System default' })];
-    for (const voice of voices) {
-      options.push(el('option', {
-        attrs: { value: voice.voiceURI },
-        text: `${voice.name} · ${voice.lang}${voice.default ? ' · default' : ''}`,
-      }));
+    const curated = curateVoices(voices);
+    if (!curated.length) {
+      voiceSelect.replaceChildren(el('option', { attrs: { value: '' }, text: 'Griot — Device voice' }));
+      settings.voiceURI = '';
+      saveVoiceSettings(settings);
+      return;
     }
+
+    const options = curated.map(({ voice, label }) => el('option', {
+      attrs: { value: voice.voiceURI },
+      text: label,
+    }));
     voiceSelect.replaceChildren(...options);
-    voiceSelect.value = voices.some((voice) => voice.voiceURI === settings.voiceURI) ? settings.voiceURI : '';
+
+    const savedStillAvailable = curated.some(({ voice: item }) => item.voiceURI === settings.voiceURI);
+    if (!savedStillAvailable) {
+      settings.voiceURI = curated[0].voice.voiceURI;
+      saveVoiceSettings(settings);
+    }
+    voiceSelect.value = settings.voiceURI;
   }
 
   panel.refreshVoices = refreshVoices;
   refreshVoices();
   if (supportsSpeech()) window.speechSynthesis.addEventListener?.('voiceschanged', refreshVoices);
   return panel;
+}
+
+function curateVoices(allVoices) {
+  const english = allVoices.filter((voice) => /^en([-_]|$)/i.test(voice.lang || ''));
+  const pool = english.length ? english : allVoices;
+  if (!pool.length) return [];
+
+  const result = [];
+  const used = new Set();
+
+  const african = pool
+    .filter((voice) => /^en[-_](NG|ZA|KE|GH)$/i.test(voice.lang || ''))
+    .sort((a, b) => voiceQualityScore(b) - voiceQualityScore(a))[0];
+  if (african) {
+    result.push({ voice: african, label: 'African English' });
+    used.add(african.voiceURI);
+  }
+
+  for (const profile of VOICE_PROFILES) {
+    const available = pool.filter((voice) => !used.has(voice.voiceURI));
+    if (!available.length) break;
+    const ranked = available
+      .map((voice) => ({ voice, score: scoreVoiceForProfile(voice, profile) }))
+      .sort((a, b) => b.score - a.score);
+    const best = ranked[0]?.voice;
+    if (!best) continue;
+    result.push({ voice: best, label: profile.label });
+    used.add(best.voiceURI);
+  }
+
+  if (!result.length) result.push({ voice: pool[0], label: 'Griot — Device voice' });
+  return result.slice(0, 4);
+}
+
+function scoreVoiceForProfile(voice, profile) {
+  const lang = String(voice.lang || '').replace('_', '-');
+  const name = String(voice.name || '').toLowerCase();
+  let score = voiceQualityScore(voice);
+
+  const languageIndex = profile.languages.findIndex((item) => lang.toLowerCase() === item.toLowerCase());
+  if (languageIndex >= 0) score += 80 - (languageIndex * 8);
+  else if (/^en/i.test(lang)) score += 25;
+
+  const nameIndex = profile.names.findIndex((item) => name.includes(item));
+  if (nameIndex >= 0) score += 100 - (nameIndex * 6);
+  return score;
+}
+
+function voiceQualityScore(voice) {
+  const name = String(voice.name || '').toLowerCase();
+  let score = 0;
+  if (voice.localService === false) score += 8;
+  if (voice.default) score += 10;
+  if (/premium|enhanced|natural|neural|online/.test(name)) score += 35;
+  if (/compact|espeak|novelty/.test(name)) score -= 35;
+  return score;
 }
 
 function ActiveGuidedTour(settings, status) {
@@ -393,6 +470,7 @@ function ActiveGuidedTour(settings, status) {
   }
 
   async function open() {
+    if (!node.hidden) return;
     startRoute = currentRoute();
     index = 0;
     autoplay = true;
@@ -442,11 +520,11 @@ function speakText(text, settings, status, callbacks = {}) {
   const selected = voices.find((voice) => voice.voiceURI === settings.voiceURI);
   if (selected) utterance.voice = selected;
   utterance.rate = settings.rate;
-  utterance.pitch = settings.pitch;
+  utterance.pitch = 1;
   utterance.volume = 1;
-  utterance.onstart = () => { status.textContent = 'Flow is speaking.'; callbacks.onStart?.(); };
-  utterance.onend = () => { status.textContent = 'Flow voice ready.'; callbacks.onEnd?.(); };
-  utterance.onerror = () => { status.textContent = 'Flow voice could not start.'; callbacks.onError?.(); };
+  utterance.onstart = () => { status.textContent = 'Griot is speaking.'; callbacks.onStart?.(); };
+  utterance.onend = () => { status.textContent = 'Griot voice ready.'; callbacks.onEnd?.(); };
+  utterance.onerror = () => { status.textContent = 'Griot voice could not start.'; callbacks.onError?.(); };
   window.speechSynthesis.speak(utterance);
 }
 
@@ -475,14 +553,13 @@ function readingDelay(step) {
 }
 
 function loadVoiceSettings() {
-  const defaults = { voiceURI: '', rate: 0.92, pitch: 1, narration: true };
+  const defaults = { voiceURI: '', rate: 0.92, narration: true };
   try {
     const saved = JSON.parse(localStorage.getItem(VOICE_STORAGE_KEY) || 'null');
     if (!saved || typeof saved !== 'object') return defaults;
     return {
       voiceURI: typeof saved.voiceURI === 'string' ? saved.voiceURI : '',
-      rate: clampNumber(saved.rate, 0.7, 1.3, defaults.rate),
-      pitch: clampNumber(saved.pitch, 0.7, 1.3, defaults.pitch),
+      rate: clampNumber(saved.rate, 0.8, 1.15, defaults.rate),
       narration: saved.narration !== false,
     };
   } catch { return defaults; }
@@ -491,7 +568,9 @@ function loadVoiceSettings() {
 function saveVoiceSettings(settings) {
   try {
     localStorage.setItem(VOICE_STORAGE_KEY, JSON.stringify({
-      voiceURI: settings.voiceURI, rate: settings.rate, pitch: settings.pitch, narration: settings.narration,
+      voiceURI: settings.voiceURI,
+      rate: settings.rate,
+      narration: settings.narration,
     }));
   } catch { /* Preferences are convenience only. */ }
 }

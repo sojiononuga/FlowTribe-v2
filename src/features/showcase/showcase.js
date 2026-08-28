@@ -2,9 +2,9 @@
  * Public Flow showcase.
  *
  * This is intentionally useful before authentication: a visitor can hear the
- * product voice, open the requested Meta AI hand-off, run the existing Flow
- * Intelligence demo, or take a short guided tour without creating an account.
- * No member data is read or written here.
+ * product voice, discover Griot, run the existing Flow Intelligence demo, or
+ * take a short guided tour without creating an account. No member data is read
+ * or written here.
  */
 
 import { el, icon } from '../../core/dom.js';
@@ -20,12 +20,6 @@ const MIC_PATHS = [
 const COMPASS_PATHS = [
   'M12 22a10 10 0 1 0 0-20 10 10 0 0 0 0 20z',
   'M16.2 7.8 14 14l-6.2 2.2L10 10z',
-];
-
-const EXTERNAL_PATHS = [
-  'M14 3h7v7',
-  'M10 14 21 3',
-  'M21 14v5a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5',
 ];
 
 const TOUR_STEPS = [
@@ -65,12 +59,11 @@ export function FlowShowcase() {
     onClick: () => speakFlow(voiceButton, voiceStatus),
   });
 
-  const metaAiLink = ShowcaseAction({
-    label: 'META AI',
-    description: 'Continue the conversation in Meta AI.',
+  const griotLink = ShowcaseAction({
+    label: 'Griot',
+    description: 'Meet Flow Tribe’s intelligent companion.',
     iconPaths: Icons.sparkle,
-    href: 'https://www.meta.ai/',
-    external: true,
+    href: '#/login',
   });
 
   const demoLink = ShowcaseAction({
@@ -94,23 +87,18 @@ export function FlowShowcase() {
       el('h2', { class: 'ft-showcase__title', text: 'Meet the system before you sign in.' }),
       el('p', {
         class: 'ft-showcase__copy',
-        text: 'Listen, explore the intelligence layer, try a real adaptation, or take the guided tour.',
+        text: 'Listen, meet Griot, try a real adaptation, or take the guided tour.',
       }),
     ]),
-    el('div', { class: 'ft-showcase__actions' }, [voiceButton, metaAiLink, demoLink, tourButton]),
+    el('div', { class: 'ft-showcase__actions' }, [voiceButton, griotLink, demoLink, tourButton]),
     voiceStatus,
     tour,
   ]);
 }
 
-function ShowcaseAction({ label, description, iconPaths, href, external = false, onClick }) {
+function ShowcaseAction({ label, description, iconPaths, href, onClick }) {
   const tag = href ? 'a' : 'button';
-  const attrs = href
-    ? {
-        href,
-        ...(external ? { target: '_blank', rel: 'noopener noreferrer' } : {}),
-      }
-    : { type: 'button' };
+  const attrs = href ? { href } : { type: 'button' };
 
   return el(tag, {
     class: 'ft-showcase-action',
@@ -122,7 +110,6 @@ function ShowcaseAction({ label, description, iconPaths, href, external = false,
       el('strong', { class: 'ft-showcase-action__label', text: label }),
       el('small', { class: 'ft-showcase-action__description', text: description }),
     ]),
-    external ? el('span', { class: 'ft-showcase-action__external', attrs: { 'aria-hidden': 'true' } }, icon(EXTERNAL_PATHS)) : null,
   ]);
 }
 
