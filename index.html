@@ -8,18 +8,6 @@
     <meta name="description" content="Keep meaningful goals alive when reality changes. Flow adapts the path, preserves progress, and helps you move with your Tribe." />
     <meta name="theme-color" content="#24634e" />
 
-    <!--
-      Member app shell.
-
-      All ten member screens are built and load as route modules fetched on
-      first visit, so a member downloads only the screens they actually open.
-
-      Stylesheets are separate <link> tags rather than one file with @import
-      because @import chains are fetched serially — each one costs a round trip
-      before the next begins. Separate links are fetched in parallel, which
-      matters on the mobile connections most members will use. There is no
-      bundler by design, so this is how the layering stays free.
-    -->
     <link rel="stylesheet" href="styles/tokens.css" />
     <link rel="stylesheet" href="styles/fonts.css" />
     <link rel="stylesheet" href="styles/reset.css" />
@@ -32,8 +20,8 @@
     <link rel="stylesheet" href="styles/components-calendar.css" />
     <link rel="stylesheet" href="styles/components-views.css" />
     <link rel="stylesheet" href="styles/modern-ui.css" />
+    <link rel="stylesheet" href="styles/dashboard-contrast.css" />
 
-    <!-- Inline SVG favicon: no request, and it scales. -->
     <link
       rel="icon"
       type="image/svg+xml"
@@ -43,15 +31,6 @@
 
   <body>
     <div id="app"></div>
-
-    <!--
-      type="module" gives us ES modules with no bundler: real imports, deferred
-      execution, and strict mode by default.
-
-      Note for local development: modules are subject to CORS, so opening this
-      file directly with file:// will not work. Serve the folder over HTTP —
-      see scripts/README.md.
-    -->
     <script type="module" src="src/main.js"></script>
 
     <noscript>
