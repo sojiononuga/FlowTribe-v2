@@ -1,0 +1,343 @@
+/* ========================================================================== 
+   Flow Tribe — Modern workspace layer
+   --------------------------------------------------------------------------
+   Presentation only. This file deliberately sits after the established
+   component styles so the verified behaviour, routes, guards and component
+   contracts remain untouched while the live product adopts the approved
+   modern visual direction.
+   ========================================================================== */
+
+/* --------------------------------------------------------------------------
+   Global surface and chrome
+   -------------------------------------------------------------------------- */
+
+body {
+  background: var(--ft-bg-page);
+}
+
+.ft-shell {
+  background: var(--ft-bg-page);
+}
+
+.ft-topbar {
+  height: calc(var(--ft-header-height) + var(--ft-space-2));
+  padding-inline: var(--ft-space-5);
+  background: color-mix(in srgb, var(--ft-bg-page) 88%, transparent);
+  border-bottom: 0;
+  box-shadow: none;
+}
+
+.ft-topbar__title {
+  font-family: var(--ft-font-display);
+  font-weight: var(--ft-weight-bold);
+  color: var(--ft-text-primary);
+}
+
+.ft-shell__main {
+  padding-top: var(--ft-space-4);
+}
+
+.ft-shell:not(.ft-shell--centered):not(.ft-shell--no-nav) > .ft-shell__main.ft-container {
+  max-width: var(--ft-container-xl);
+}
+
+/* --------------------------------------------------------------------------
+   Cards and controls
+   -------------------------------------------------------------------------- */
+
+.ft-card {
+  border-color: transparent;
+  border-radius: var(--ft-radius-2xl);
+  box-shadow: var(--ft-shadow-sm);
+}
+
+.ft-card__body {
+  padding: var(--ft-space-6);
+}
+
+.ft-card--brand {
+  position: relative;
+  overflow: hidden;
+  background: var(--ft-burgundy-800);
+  border-color: transparent;
+  box-shadow: var(--ft-shadow-md);
+}
+
+.ft-card--brand::after {
+  content: '';
+  position: absolute;
+  width: var(--ft-space-20);
+  height: var(--ft-space-20);
+  right: calc(var(--ft-space-8) * -1);
+  bottom: calc(var(--ft-space-8) * -1);
+  border-radius: var(--ft-radius-full);
+  background: var(--ft-gold-400);
+  opacity: 0.18;
+  pointer-events: none;
+}
+
+.ft-btn {
+  border-radius: var(--ft-radius-md);
+}
+
+.ft-btn--primary {
+  background: var(--ft-burgundy-700);
+}
+
+.ft-btn--primary:hover:not(:disabled) {
+  background: var(--ft-burgundy-800);
+}
+
+.ft-btn--secondary {
+  background: var(--ft-bg-raised);
+  border-color: var(--ft-burgundy-200);
+  color: var(--ft-burgundy-800);
+}
+
+.ft-btn--secondary:hover:not(:disabled) {
+  background: var(--ft-burgundy-50);
+  border-color: var(--ft-burgundy-400);
+}
+
+.ft-input,
+.ft-select,
+.ft-pin__digit {
+  background: var(--ft-bg-raised);
+  border-color: var(--ft-border-subtle);
+  box-shadow: var(--ft-shadow-xs);
+}
+
+.ft-input:hover:not(:disabled):not(:focus),
+.ft-select:hover:not(:disabled):not(:focus) {
+  border-color: var(--ft-burgundy-300);
+}
+
+.ft-pagehead {
+  padding-top: var(--ft-space-4);
+  padding-bottom: var(--ft-space-6);
+}
+
+.ft-pagehead__eyebrow,
+.ft-flow-hero__eyebrow {
+  color: var(--ft-burgundy-600);
+  letter-spacing: var(--ft-tracking-widest);
+}
+
+.ft-section__header {
+  margin-bottom: var(--ft-space-4);
+}
+
+/* --------------------------------------------------------------------------
+   Member navigation — unmistakably new on desktop, thumb-first on mobile
+   -------------------------------------------------------------------------- */
+
+.ft-bottomnav {
+  background: color-mix(in srgb, var(--ft-bg-raised) 94%, transparent);
+  border-top-color: var(--ft-border-subtle);
+  box-shadow: 0 calc(var(--ft-space-2) * -1) var(--ft-space-6) rgba(20, 51, 42, 0.08);
+}
+
+.ft-bottomnav__item[aria-current='page'] {
+  color: var(--ft-burgundy-700);
+}
+
+.ft-bottomnav__cta {
+  background: var(--ft-burgundy-700);
+  box-shadow: var(--ft-shadow-md);
+}
+
+.ft-bottomnav__cta:hover {
+  background: var(--ft-burgundy-800);
+}
+
+@media (min-width: 1024px) {
+  .ft-shell:not(.ft-shell--centered):not(.ft-shell--no-nav) {
+    grid-template-columns: var(--ft-sidebar-width) minmax(0, 1fr);
+    grid-template-rows: auto minmax(0, 1fr);
+  }
+
+  .ft-shell:not(.ft-shell--centered):not(.ft-shell--no-nav) > .ft-topbar {
+    grid-area: topbar;
+    background: var(--ft-burgundy-900);
+    color: var(--ft-text-inverse);
+    box-shadow: var(--ft-shadow-sm);
+  }
+
+  .ft-shell:not(.ft-shell--centered):not(.ft-shell--no-nav) > .ft-topbar .ft-logo,
+  .ft-shell:not(.ft-shell--centered):not(.ft-shell--no-nav) > .ft-topbar .ft-topbar__title {
+    color: var(--ft-text-inverse);
+  }
+
+  .ft-shell:not(.ft-shell--centered):not(.ft-shell--no-nav) > .ft-bottomnav {
+    top: calc(var(--ft-header-height) + var(--ft-space-2));
+    height: calc(100dvh - var(--ft-header-height) - var(--ft-space-2));
+    padding: var(--ft-space-6) var(--ft-space-4);
+    background: var(--ft-burgundy-900);
+    border-right: 0;
+    box-shadow: none;
+  }
+
+  .ft-bottomnav__item {
+    min-height: var(--ft-tap-target);
+    padding: var(--ft-space-3) var(--ft-space-4);
+    color: var(--ft-burgundy-200);
+    border-radius: var(--ft-radius-md);
+  }
+
+  .ft-bottomnav__item:hover {
+    color: var(--ft-text-inverse);
+    background: color-mix(in srgb, var(--ft-burgundy-700) 70%, transparent);
+  }
+
+  .ft-bottomnav__item[aria-current='page'] {
+    background: var(--ft-gold-100);
+    color: var(--ft-burgundy-900);
+    box-shadow: var(--ft-shadow-sm);
+  }
+
+  .ft-bottomnav__cta {
+    order: -1;
+    margin-bottom: var(--ft-space-5);
+    background: var(--ft-gold-400);
+    color: var(--ft-burgundy-900);
+    box-shadow: none;
+  }
+
+  .ft-bottomnav__cta:hover {
+    background: var(--ft-gold-300);
+  }
+
+  .ft-shell:not(.ft-shell--centered):not(.ft-shell--no-nav) > .ft-shell__main {
+    padding-top: var(--ft-space-8);
+    padding-bottom: var(--ft-space-12);
+  }
+}
+
+/* --------------------------------------------------------------------------
+   Dashboard — from narrow document stack to a true workspace
+   -------------------------------------------------------------------------- */
+
+.ft-welcome {
+  padding-inline: var(--ft-space-1);
+}
+
+.ft-welcome__title {
+  max-width: 18ch;
+}
+
+.ft-flow-hero__title {
+  max-width: 22ch;
+}
+
+.ft-flow-hero__score {
+  background: color-mix(in srgb, var(--ft-bg-raised) 12%, transparent);
+  border-radius: var(--ft-radius-xl);
+}
+
+.ft-flow-plan__step {
+  border-radius: var(--ft-radius-lg);
+}
+
+.ft-constraint {
+  border-radius: var(--ft-radius-lg);
+  background: var(--ft-burgundy-50);
+}
+
+@media (min-width: 1024px) {
+  .ft-dashboard > .ft-stack {
+    display: grid;
+    grid-template-columns: repeat(12, minmax(0, 1fr));
+    gap: var(--ft-space-6);
+    align-items: start;
+  }
+
+  .ft-dashboard > .ft-stack > * {
+    min-width: 0;
+  }
+
+  .ft-dashboard > .ft-stack > :nth-child(1) {
+    grid-column: 1 / -1;
+  }
+
+  .ft-dashboard > .ft-stack > :nth-child(2) {
+    grid-column: span 7;
+    height: 100%;
+  }
+
+  .ft-dashboard > .ft-stack > :nth-child(3) {
+    grid-column: span 5;
+    height: 100%;
+  }
+
+  .ft-dashboard > .ft-stack > :nth-child(4) {
+    grid-column: span 7;
+  }
+
+  .ft-dashboard > .ft-stack > :nth-child(5) {
+    grid-column: span 5;
+  }
+
+  .ft-dashboard > .ft-stack > :nth-child(6),
+  .ft-dashboard > .ft-stack > :nth-child(7) {
+    grid-column: span 6;
+  }
+
+  .ft-dashboard > .ft-stack > :nth-child(n + 8) {
+    grid-column: 1 / -1;
+  }
+
+  .ft-dashboard .ft-card__body {
+    padding: var(--ft-space-6);
+  }
+
+  .ft-dashboard .ft-grid--4 {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (min-width: 1280px) {
+  .ft-dashboard > .ft-stack {
+    gap: var(--ft-space-8);
+  }
+
+  .ft-dashboard .ft-grid--4 {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
+
+/* --------------------------------------------------------------------------
+   Auth — cleaner, calmer entry surface
+   -------------------------------------------------------------------------- */
+
+.ft-shell--centered {
+  min-height: 100dvh;
+  padding: var(--ft-space-6) var(--ft-space-4);
+  background: var(--ft-bg-page);
+}
+
+.ft-shell--centered .ft-shell__main {
+  width: 100%;
+}
+
+.ft-shell--centered .ft-card {
+  box-shadow: var(--ft-shadow-lg);
+  border: 0;
+}
+
+.ft-shell--centered .ft-card__body {
+  padding: var(--ft-space-8);
+}
+
+/* --------------------------------------------------------------------------
+   Small-screen polish
+   -------------------------------------------------------------------------- */
+
+@media (min-width: 768px) {
+  .ft-card__body {
+    padding: var(--ft-space-6);
+  }
+
+  .ft-pagehead {
+    padding-top: var(--ft-space-6);
+  }
+}
