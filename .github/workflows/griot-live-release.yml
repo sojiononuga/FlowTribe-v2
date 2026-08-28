@@ -1,0 +1,126 @@
+name: Griot live release
+
+on:
+  push:
+    paths:
+      - '.github/workflows/griot-live-release.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out production source
+        uses: actions/checkout@v4
+        with:
+          ref: main
+
+      - name: Verify live Apps Script backend and Griot route
+        shell: bash
+        env:
+          API_URL: https://script.google.com/macros/s/AKfycbwWWVFp0K9oJKkZsnOackCSCmeAUPxZLRANX9v1YN0Dl-Y3VdTg_4Qp5_s-arhYZuOB/exec
+        run: |
+          set -euo pipefail
+          health="$(curl -fsSL "$API_URL")"
+          printf '%s\n' "$health" | jq -e '.ok == true and .data.status == "ok"' >/dev/null
+          echo 'LIVE API HEALTH PASSED'
+
+          response="$(curl -sSL -H 'Content-Type: application/json' \
+            --data '{"action":"griot.chat","payload":{"message":"Hello Griot"}}' \
+            "$API_URL")"
+          printf '%s\n' "$response" | jq -e '.ok == false' >/dev/null
+          if printf '%s' "$response" | grep -Eqi 'unknown action|action not found|unsupported action'; then
+            echo "griot.chat is not deployed in the live router"
+            printf '%s\n' "$response"
+            exit 41
+          fi
+          echo 'LIVE GRIOT ROUTE PASSED (authentication boundary enforced)'
+
+      - name: Prepare production frontend
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -rf deploy
+          mkdir deploy
+          rsync -a ./ deploy/ \
+            --exclude='.git' \
+            --exclude='.github' \
+            --exclude='deploy' \
+            --exclude='tests' \
+            --exclude='docs' \
+            --exclude='dist' \
+            --exclude='scripts' \
+            --exclude='appsscript' \
+            --exclude='.clasp.json*' \
+            --exclude='.claude' \
+            --exclude='.netlify-site-id'
+          cat > deploy/src/core/config.js <<'EOF'
+          export const config = {
+            version: '2.0.0',
+            api: {
+              baseUrl: 'https://script.google.com/macros/s/AKfycbwWWVFp0K9oJKkZsnOackCSCmeAUPxZLRANX9v1YN0Dl-Y3VdTg_4Qp5_s-arhYZuOB/exec',
+              timeoutMs: 20000,
+            },
+            app: {
+              name: 'Flow Tribe',
+              memberEntry: 'index.html',
+              adminEntry: 'admin.html',
+              timezone: 'Africa/Lagos',
+            },
+            rules: {
+              pinLength: 6,
+              usernameMinLength: 3,
+              usernameMaxLength: 20,
+              bioMaxLength: 160,
+            },
+            debug: false,
+          };
+          export default config;
+          EOF
+          rm -f deploy/gallery.html
+
+      - name: Deploy Griot frontend to Netlify production
+        id: deploy
+        shell: bash
+        env:
+          NETLIFY_AUTH_TOKEN: ${{ secrets.NETLIFY_AUTH_TOKEN }}
+        run: |
+          set -euo pipefail
+          test -n "$NETLIFY_AUTH_TOKEN" || { echo 'NETLIFY_AUTH_TOKEN is not configured'; exit 20; }
+          SITE_ID="$(tr -d '\r\n ' < .netlify-site-id)"
+          npx --yes netlify-cli@23.11.0 deploy \
+            --prod \
+            --dir deploy \
+            --site "$SITE_ID" \
+            --auth "$NETLIFY_AUTH_TOKEN" \
+            --message "Griot production $GITHUB_SHA" \
+            --json | tee netlify-deploy.json
+          SITE_URL="$(jq -r '.url // .ssl_url // .deploy_url' netlify-deploy.json)"
+          test -n "$SITE_URL" && test "$SITE_URL" != null
+          echo "site_url=$SITE_URL" >> "$GITHUB_OUTPUT"
+          echo "PRODUCTION_DEPLOY_URL=$SITE_URL"
+
+      - name: Verify live Griot assets and mobile treatment
+        shell: bash
+        env:
+          SITE_URL: ${{ steps.deploy.outputs.site_url }}
+        run: |
+          set -euo pipefail
+          base="${SITE_URL%/}"
+          curl -fsSL "$base/src/features/showcase/meta-ai.js" -o /tmp/griot.js
+          curl -fsSL "$base/src/features/showcase/member-assist.js" -o /tmp/assist.js
+          curl -fsSL "$base/styles/meta-ai.css" -o /tmp/griot.css
+
+          grep -F "call('griot.chat'" /tmp/griot.js >/dev/null
+          grep -F 'Ask Griot' /tmp/griot.js >/dev/null
+          grep -F 'SpeechRecognition' /tmp/griot.js >/dev/null
+          grep -F 'visualViewport' /tmp/griot.js >/dev/null
+          grep -F 'Griot — Warm & grounded' /tmp/assist.js >/dev/null
+          grep -F '100dvh' /tmp/griot.css >/dev/null
+          if grep -F 'Ask Meta AI' /tmp/griot.js >/dev/null; then
+            echo 'Old Meta AI product branding is still present'
+            exit 51
+          fi
+          echo 'LIVE GRIOT FRONTEND + MOBILE ASSET VERIFICATION PASSED'
