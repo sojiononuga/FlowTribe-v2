@@ -8,7 +8,10 @@
  */
 
 var GriotService = (function () {
-  var DEFAULT_MODEL = 'muse-spark-1.2';
+  // Keep the production default on the canonical model id documented by
+  // Meta's Model API cookbook. A later model can be selected explicitly with
+  // FT_GRIOT_MODEL once it has been verified for this account.
+  var DEFAULT_MODEL = 'muse-spark-1.1';
   var API_URL = 'https://api.meta.ai/v1/chat/completions';
   var MAX_HISTORY = 10;
 
