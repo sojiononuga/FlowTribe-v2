@@ -91,13 +91,93 @@ async function verifyHarness(page, pathname, resultExpression, expectedTotal, la
 async function verifyHelpQuality(browser) {
   const page = await browser.newPage({ viewport: { width: 390, height: 844 } });
   const pageErrors = [];
+  const requests = [];
   page.on('pageerror', (error) => pageErrors.push(error.message));
+
+  await page.addInitScript(() => {
+    class FakeSpeechRecognition {
+      constructor() {
+        this.lang = 'en-GB';
+        this.interimResults = true;
+        this.continuous = false;
+        this.maxAlternatives = 1;
+      }
+      start() {
+        this.onstart?.();
+        setTimeout(() => {
+          const result = [{ transcript: 'A family emergency took my evening. What is the most sensible move tomorrow?' }];
+          result.isFinal = true;
+          this.onresult?.({ resultIndex: 0, results: [result] });
+          this.onend?.();
+        }, 60);
+      }
+      stop() { this.onend?.(); }
+    }
+    window.SpeechRecognition = FakeSpeechRecognition;
+  });
+
+  await page.route('https://flow.test/griot', async (route) => {
+    const raw = route.request().postData() || '{}';
+    const body = JSON.parse(raw);
+    requests.push(body);
+
+    let data;
+    if (body.action === 'member.dashboard') {
+      data = {
+        member: {
+          memberId: 'FT-TEST',
+          fullName: 'Test Member',
+          goalTitle: 'Finish the competition submission',
+          showingUp: 'Complete one credible competition task',
+          constraints: 'Evenings can be interrupted by family responsibilities',
+          weeklyGoal: 3,
+        },
+        week: { weeklyGoal: 3, postsThisWeek: 1 },
+        stats: { currentWeekStreak: 0, longestWeekStreak: 2, allTimePosts: 7 },
+        recent: [{ actionTitle: 'Reviewed submission evidence' }],
+      };
+    } else if (body.action === 'griot.chat') {
+      const spoken = /family emergency/i.test(body.payload?.message || '');
+      data = spoken
+        ? {
+            text: 'Do not try to repay the lost evening. Protect the submission goal and choose one complete, time-boxed move tomorrow morning before the day gets noisy.',
+            action: { route: '/adapt', label: 'Shape tomorrow’s move' },
+            grounded: true,
+          }
+        : {
+            text: 'The interruption changes the route, not the destination. Keep the competition submission as the anchor and choose one credible move you can finish tomorrow.',
+            action: { event: 'tour', label: 'Show me how Flow helps' },
+            grounded: true,
+          };
+    } else {
+      data = {};
+    }
+
+    await route.fulfill({
+      status: 200,
+      headers: {
+        'content-type': 'application/json; charset=utf-8',
+        'access-control-allow-origin': '*',
+      },
+      body: JSON.stringify({ ok: true, data, meta: {} }),
+    });
+  });
 
   await page.goto(`http://${host}:${port}/tests/help-quality.html`, { waitUntil: 'load' });
 
   await page.evaluate(async () => {
+    const { config } = await import('../src/core/config.js');
+    const { saveSession } = await import('../src/core/session.js');
     const { installTourQualityGuards } = await import('../src/features/showcase/tour-quality.js');
-    const { MetaAiControl } = await import('../src/features/showcase/meta-ai.js');
+    const { GriotControl } = await import('../src/features/showcase/meta-ai.js');
+
+    config.api.baseUrl = 'https://flow.test/griot';
+    saveSession({
+      token: 'test-token',
+      expiresAt: '2099-12-31T23:59:59.000Z',
+      member: { memberId: 'FT-TEST', username: 'test', fullName: 'Test Member', role: 'Member' },
+      capabilities: ['dashboard:self'],
+    });
 
     installTourQualityGuards();
 
@@ -124,10 +204,11 @@ async function verifyHelpQuality(browser) {
     location.hash = '#/profile';
 
     const status = document.createElement('span');
-    fixture.append(MetaAiControl({ status }));
+    status.id = 'griot-test-status';
+    fixture.append(status, GriotControl({ status }));
   });
 
-  await page.waitForTimeout(120);
+  await page.waitForTimeout(150);
 
   const tourTarget = await page.evaluate(() => ({
     main: document.querySelector('#main').classList.contains('ft-live-tour-target'),
@@ -141,50 +222,91 @@ async function verifyHelpQuality(browser) {
   if (!tourTarget.calendarAlias) throw new Error('Help quality: movement calendar compatibility target was not installed.');
   if (!['top', 'bottom'].includes(tourTarget.placement)) throw new Error('Help quality: tour panel did not choose a viewport side.');
 
-  // The real product does not keep the tour dialog open while opening Meta.
-  // Close the isolated tour fixture before exercising the independent Meta surface.
-  await page.evaluate(() => {
-    document.querySelector('.ft-live-tour').hidden = true;
-  });
-  await page.waitForTimeout(40);
+  await page.evaluate(() => { document.querySelector('.ft-live-tour').hidden = true; });
 
-  await page.getByRole('button', { name: 'Ask Meta AI' }).click();
-  await page.getByLabel('Ask Meta AI a question').fill('What if I am still struggling?');
-  await page.getByRole('button', { name: 'Ask', exact: true }).click();
-  await page.getByText(/not to push harder at the same plan/i).waitFor({ timeout: 5000 });
-  await page.getByText(/recovery move you can actually do/i).waitFor({ timeout: 5000 });
+  await page.getByRole('button', { name: 'Ask Griot' }).click();
+  await page.getByLabel('Ask Griot a question').fill('I lost the time I planned for this tonight. How should I think about tomorrow?');
+  await page.getByRole('button', { name: 'Send', exact: true }).click();
+  await page.getByText(/interruption changes the route, not the destination/i).waitFor({ timeout: 5000 });
 
-  const overflow = await page.evaluate(() => {
+  const typedRequest = requests.find((request) => request.action === 'griot.chat');
+  if (!typedRequest) throw new Error('Griot quality: typed conversation did not call griot.chat.');
+  if (!typedRequest.token) throw new Error('Griot quality: model conversation was not authenticated.');
+  if (typedRequest.payload?.route !== '/profile') throw new Error(`Griot quality: route context missing (${typedRequest.payload?.route}).`);
+
+  const geometry = await page.evaluate(() => {
     const panel = document.querySelector('.ft-meta-ai__panel');
-    const quick = document.querySelector('.ft-meta-ai__quick');
     const composer = document.querySelector('.ft-meta-ai__composer');
+    const input = document.querySelector('.ft-meta-ai__input');
+    const mic = document.querySelector('.ft-meta-ai__mic');
+    const rect = panel.getBoundingClientRect();
+    const micRect = mic.getBoundingClientRect();
     return {
-      panel: panel.scrollWidth - panel.clientWidth,
-      quick: quick.scrollWidth - quick.clientWidth,
-      composer: composer.scrollWidth - composer.clientWidth,
-      inputTag: document.querySelector('.ft-meta-ai__input').tagName,
+      panelOverflow: panel.scrollWidth - panel.clientWidth,
+      composerOverflow: composer.scrollWidth - composer.clientWidth,
+      inputTag: input.tagName,
+      inputFontSize: getComputedStyle(input).fontSize,
+      panelTop: rect.top,
+      panelBottom: rect.bottom,
+      viewportHeight: window.innerHeight,
+      micWidth: micRect.width,
+      micHeight: micRect.height,
     };
   });
 
-  if (overflow.panel > 1 || overflow.quick > 1 || overflow.composer > 1) {
-    throw new Error(`Help quality: horizontal overflow remains ${JSON.stringify(overflow)}.`);
+  if (geometry.panelOverflow > 1 || geometry.composerOverflow > 1) {
+    throw new Error(`Griot quality: horizontal overflow remains ${JSON.stringify(geometry)}.`);
   }
-  if (overflow.inputTag !== 'TEXTAREA') throw new Error(`Help quality: composer is ${overflow.inputTag}, expected TEXTAREA.`);
+  if (geometry.inputTag !== 'TEXTAREA') throw new Error(`Griot quality: composer is ${geometry.inputTag}, expected TEXTAREA.`);
+  if (parseFloat(geometry.inputFontSize) < 16) throw new Error(`Griot quality: mobile input font may trigger iOS zoom (${geometry.inputFontSize}).`);
+  if (geometry.panelTop < -0.5 || geometry.panelBottom > geometry.viewportHeight + 0.5) {
+    throw new Error(`Griot quality: panel escaped mobile viewport ${JSON.stringify(geometry)}.`);
+  }
+  if (geometry.micWidth < 44 || geometry.micHeight < 44) {
+    throw new Error(`Griot quality: microphone target is too small ${geometry.micWidth}x${geometry.micHeight}.`);
+  }
 
-  await page.getByLabel('Ask Meta AI a question').fill('How can this app help me?');
-  await page.getByRole('button', { name: 'Ask', exact: true }).click();
-  await page.getByRole('button', { name: 'Show me how it works' }).waitFor({ timeout: 5000 });
-
-  const eventReceived = page.evaluate(() => new Promise((resolve) => {
+  const tourEvent = page.evaluate(() => new Promise((resolve) => {
     document.addEventListener('flowtribe:tour-open', () => resolve(true), { once: true });
     setTimeout(() => resolve(false), 2000);
   }));
-  await page.getByRole('button', { name: 'Show me how it works' }).click();
-  if (!(await eventReceived)) throw new Error('Help quality: Meta tour action did not dispatch the tour event.');
+  await page.getByRole('button', { name: 'Show me how Flow helps' }).click();
+  if (!(await tourEvent)) throw new Error('Griot quality: model tour action did not dispatch the tour event.');
 
-  if (pageErrors.length) throw new Error(`Help quality produced page errors:\n${pageErrors.join('\n')}`);
+  // Open again and prove spoken input enters the exact same griot.chat path.
+  await page.getByRole('button', { name: 'Ask Griot' }).click();
+  const beforeSpeech = requests.filter((request) => request.action === 'griot.chat').length;
+  await page.getByRole('button', { name: 'Talk to Griot' }).click();
+  await page.getByText(/Do not try to repay the lost evening/i).waitFor({ timeout: 5000 });
+  const afterSpeechRequests = requests.filter((request) => request.action === 'griot.chat');
+  if (afterSpeechRequests.length !== beforeSpeech + 1) {
+    throw new Error('Griot quality: spoken input did not make exactly one shared conversation request.');
+  }
+  const spokenRequest = afterSpeechRequests.at(-1);
+  if (!/family emergency/i.test(spokenRequest.payload?.message || '')) {
+    throw new Error('Griot quality: speech transcript did not reach the shared conversation payload.');
+  }
+  if (!Array.isArray(spokenRequest.payload?.history) || spokenRequest.payload.history.length < 2) {
+    throw new Error('Griot quality: conversational history was not preserved between typed and spoken turns.');
+  }
+
+  // Simulate a mobile visual viewport compressed by the on-screen keyboard.
+  await page.evaluate(() => {
+    document.documentElement.style.setProperty('--ft-griot-vv-height', '430px');
+    document.documentElement.style.setProperty('--ft-griot-vv-offset', '90px');
+  });
+  await page.waitForTimeout(40);
+  const keyboardGeometry = await page.evaluate(() => {
+    const rect = document.querySelector('.ft-meta-ai__panel').getBoundingClientRect();
+    return { top: rect.top, bottom: rect.bottom };
+  });
+  if (keyboardGeometry.top < 89 || keyboardGeometry.bottom > 521) {
+    throw new Error(`Griot quality: keyboard-compressed visual viewport is not respected ${JSON.stringify(keyboardGeometry)}.`);
+  }
+
+  if (pageErrors.length) throw new Error(`Griot quality produced page errors:\n${pageErrors.join('\n')}`);
   await page.close();
-  console.log('Help quality verification: 8/8 passed');
+  console.log('Griot help quality verification: typed AI, spoken AI, context and mobile treatment passed');
 }
 
 let browser;
