@@ -97,7 +97,7 @@ jobs:
           });
 
           await page.getByRole('button', { name: 'Voice settings' }).last().click();
-          await page.getByText('Choose how Flow speaks to you.', { exact: true }).waitFor();
+          await page.getByText('Choose how Flow speaks to you.', { exact: true }).last().waitFor();
           const select = page.getByLabel('Choose voice').last();
           if ((await select.locator('option').count()) < 3) throw new Error('voice choices were not populated');
           await select.selectOption('flow-calm');
@@ -112,12 +112,12 @@ jobs:
           if (Math.abs(preview.pitch - 0.9) > 0.01) throw new Error(`voice pitch not applied: ${preview.pitch}`);
 
           await page.getByRole('button', { name: 'Show me round Flow Tribe' }).last().click();
-          await page.getByText('This is your home base.', { exact: true }).waitFor({ timeout: 10000 });
+          await page.getByText('This is your home base.', { exact: true }).last().waitFor({ timeout: 10000 });
           await page.waitForTimeout(500);
           const narrated = await page.evaluate(() => window.__spoken.some((item) => item.text.includes('Welcome to Flow Tribe')));
           if (!narrated) throw new Error('tour did not narrate its first step');
           await page.getByRole('button', { name: 'Next' }).last().click();
-          await page.getByText('The goal stays visible.', { exact: true }).waitFor();
+          await page.getByText('The goal stays visible.', { exact: true }).last().waitFor();
           await page.getByRole('button', { name: 'Replay voice' }).last().click();
           await page.waitForTimeout(30);
           const replayed = await page.evaluate(() => window.__spoken.at(-1)?.text.includes('green card'));
@@ -128,4 +128,4 @@ jobs:
           EOF
           node live-check.mjs
 
-# configurable voice + active narrated tour verification trigger: 2026-08-28
+# configurable voice + active narrated tour verification rerun: 2026-08-28
