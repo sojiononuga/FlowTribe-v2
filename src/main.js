@@ -23,6 +23,7 @@ import { el } from './core/dom.js';
 import { Icons } from './lib/icons.js';
 import { registerRouter } from './app/navigation.js';
 import { MemberAssistControls } from './features/showcase/member-assist.js';
+import { installTourQualityGuards } from './features/showcase/tour-quality.js';
 
 const requireAuth = () => {
   if (!isAuthenticated()) return '/login';
@@ -80,6 +81,7 @@ function boot() {
   if (config.debug) globalThis.__FT_DEBUG__ = true;
 
   restoreSession();
+  installTourQualityGuards();
 
   const bottomNav = BottomNav({ items: NAV_ITEMS, activeId: 'dashboard' });
   const assist = MemberAssistControls();
