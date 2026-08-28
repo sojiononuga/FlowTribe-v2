@@ -119,4 +119,4 @@ jobs:
           cat netlify-deploy.json
           echo "Production site: ${{ steps.site.outputs.site_url }}"
 
-# forest and cream palette release trigger: 2026-08-27
+# immediate tour narration release trigger: 2026-08-28
