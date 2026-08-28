@@ -1,0 +1,36 @@
+name: Griot release capability check
+
+on:
+  push:
+    paths:
+      - '.github/workflows/griot-release-capability.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check protected release capabilities
+        shell: bash
+        env:
+          FT_GRIOT_LLAMA_API_KEY: ${{ secrets.FT_GRIOT_LLAMA_API_KEY }}
+          LLAMA_API_KEY: ${{ secrets.LLAMA_API_KEY }}
+          META_API_KEY: ${{ secrets.META_API_KEY }}
+          CLASPRC_JSON: ${{ secrets.CLASPRC_JSON }}
+          CLASP_TOKEN: ${{ secrets.CLASP_TOKEN }}
+          GOOGLE_APPS_SCRIPT_TOKEN: ${{ secrets.GOOGLE_APPS_SCRIPT_TOKEN }}
+          GOOGLE_CREDENTIALS: ${{ secrets.GOOGLE_CREDENTIALS }}
+          GOOGLE_SERVICE_ACCOUNT_JSON: ${{ secrets.GOOGLE_SERVICE_ACCOUNT_JSON }}
+        run: |
+          set -euo pipefail
+          present() { if [ -n "${!1:-}" ]; then echo "$1=PRESENT"; else echo "$1=ABSENT"; fi; }
+          present FT_GRIOT_LLAMA_API_KEY
+          present LLAMA_API_KEY
+          present META_API_KEY
+          present CLASPRC_JSON
+          present CLASP_TOKEN
+          present GOOGLE_APPS_SCRIPT_TOKEN
+          present GOOGLE_CREDENTIALS
+          present GOOGLE_SERVICE_ACCOUNT_JSON
