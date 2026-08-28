@@ -2,67 +2,122 @@ import { el, icon } from '../../core/dom.js';
 import { call } from '../../core/api.js';
 import { navigate } from '../../app/navigation.js';
 
-const HELP_STORAGE_KEY = 'flowtribe.meta.help.v1';
+const HELP_STORAGE_KEY = 'flowtribe.griot.help.v1';
+const PREF_STORAGE_KEY = 'flowtribe.griot.preferences.v1';
 const CONTEXT_CACHE_MS = 30000;
+const MAX_HISTORY = 10;
+
 const SPARKLE_PATHS = [
   'M12 3l1.5 4.5L18 9l-4.5 1.5L12 15l-1.5-4.5L6 9l4.5-1.5L12 3z',
   'M19 14l.8 2.2L22 17l-2.2.8L19 20l-.8-2.2L16 17l2.2-.8L19 14z',
   'M5 14l.7 1.8L7.5 16.5l-1.8.7L5 19l-.7-1.8-1.8-.7 1.8-.7L5 14z',
 ];
 
-export function MetaAiControl({ status } = {}) {
+const MIC_PATHS = [
+  'M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3z',
+  'M19 10v2a7 7 0 0 1-14 0v-2',
+  'M12 19v3',
+  'M8 22h8',
+];
+
+const SPEAKER_PATHS = [
+  'M11 5 6 9H2v6h4l5 4V5z',
+  'M15.5 8.5a5 5 0 0 1 0 7',
+  'M18 6a8 8 0 0 1 0 12',
+];
+
+export function GriotControl({ status } = {}) {
+  const preferences = loadPreferences();
   const state = {
     dashboard: null,
     help: { intensity: 'standard', reason: 'I will learn from your Flow as you use it.' },
-    loading: false,
+    loadingContext: false,
+    asking: false,
     lastLoadedAt: 0,
     history: [],
-    lastIntent: null,
+    recognition: null,
+    listening: false,
+    preferences,
   };
 
-  const messages = el('div', { class: 'ft-meta-ai__messages', attrs: { role: 'log', 'aria-live': 'polite' } });
+  const messages = el('div', {
+    class: 'ft-meta-ai__messages',
+    attrs: { role: 'log', 'aria-live': 'polite', 'aria-label': 'Conversation with Griot' },
+  });
   const helpBadge = el('span', { class: 'ft-meta-ai__help-badge', text: 'Learning your Flow' });
   const input = el('textarea', {
     class: 'ft-meta-ai__input',
     attrs: {
       rows: '2',
-      placeholder: 'Ask about your Flow, what is stuck, or what to do next…',
-      'aria-label': 'Ask Meta AI a question',
+      placeholder: 'Tell Griot what is happening, or ask what to do next…',
+      'aria-label': 'Ask Griot a question',
+      enterkeyhint: 'send',
     },
     on: {
       keydown: (event) => {
         if (event.key === 'Enter' && !event.shiftKey) {
           event.preventDefault();
-          ask(input.value);
+          ask(input.value, { spoken: false });
         }
       },
     },
   });
 
+  const micButton = el('button', {
+    class: 'ft-meta-ai__mic',
+    attrs: { type: 'button', 'aria-label': 'Talk to Griot', 'aria-pressed': 'false' },
+    on: { click: () => toggleListening() },
+  }, [el('span', { class: 'ft-meta-ai__mic-icon' }, icon(MIC_PATHS))]);
+
+  const speakButton = el('button', {
+    class: 'ft-meta-ai__speak-toggle',
+    attrs: {
+      type: 'button',
+      'aria-label': 'Speak Griot replies',
+      'aria-pressed': String(state.preferences.speakReplies),
+      title: 'Speak replies',
+    },
+    on: {
+      click: () => {
+        state.preferences.speakReplies = !state.preferences.speakReplies;
+        speakButton.setAttribute('aria-pressed', String(state.preferences.speakReplies));
+        savePreferences(state.preferences);
+        announce(state.preferences.speakReplies ? 'Griot will speak replies.' : 'Griot replies will stay silent.');
+      },
+    },
+  }, [el('span', { class: 'ft-meta-ai__mic-icon' }, icon(SPEAKER_PATHS))]);
+
+  const sendButton = el('button', {
+    class: 'ft-meta-ai__send',
+    attrs: { type: 'submit' },
+    text: 'Send',
+  });
+
   const panel = el('section', {
-    class: 'ft-meta-ai__panel',
-    attrs: { hidden: true, 'aria-label': 'Meta AI' },
+    class: 'ft-meta-ai__panel ft-griot__panel',
+    attrs: { hidden: true, 'aria-label': 'Griot', role: 'dialog', 'aria-modal': 'false' },
   }, [
     el('div', { class: 'ft-meta-ai__head' }, [
       el('div', {}, [
-        el('strong', { text: 'Meta AI' }),
-        el('p', { text: 'Ask about your Flow. I use your current progress and the conversation so the help stays relevant.' }),
+        el('strong', { text: 'Griot' }),
+        el('p', { text: 'Your Flow companion. Talk naturally — Griot works from your direction, progress, constraints and this conversation.' }),
       ]),
-      helpBadge,
+      el('div', { class: 'ft-griot__head-actions' }, [helpBadge, speakButton]),
     ]),
     messages,
     el('div', { class: 'ft-meta-ai__quick' }, [
-      quick('What do I need to do?'),
-      quick('Am I behind?'),
-      quick('I am struggling'),
-      quick('How can Flow help me?'),
+      quick('What should I focus on now?'),
+      quick('I am falling behind'),
+      quick('Something changed'),
+      quick('Talk me through my Flow'),
     ]),
     el('form', {
       class: 'ft-meta-ai__composer',
-      on: { submit: (event) => { event.preventDefault(); ask(input.value); } },
+      on: { submit: (event) => { event.preventDefault(); ask(input.value, { spoken: false }); } },
     }, [
+      micButton,
       input,
-      el('button', { class: 'ft-meta-ai__send', attrs: { type: 'submit' }, text: 'Ask' }),
+      sendButton,
     ]),
   ]);
 
@@ -73,22 +128,27 @@ export function MetaAiControl({ status } = {}) {
   });
 
   const button = el('button', {
-    class: 'ft-assist__button ft-meta-ai__button',
-    attrs: { type: 'button', 'aria-label': 'Ask Meta AI', 'aria-expanded': 'false' },
+    class: 'ft-assist__button ft-meta-ai__button ft-griot__button',
+    attrs: { type: 'button', 'aria-label': 'Ask Griot', 'aria-expanded': 'false' },
     on: { click: () => panel.hidden ? open() : close() },
   }, [
     el('span', { class: 'ft-assist__icon ft-meta-ai__sparkle' }, icon(SPARKLE_PATHS)),
-    el('span', { class: 'ft-assist__label', text: 'Ask Meta AI' }),
+    el('span', { class: 'ft-assist__label', text: 'Ask Griot' }),
   ]);
 
-  const node = el('div', { class: 'ft-meta-ai' }, [button, nudge, panel]);
+  const node = el('div', { class: 'ft-meta-ai ft-griot' }, [button, nudge, panel]);
+
+  configureRecognition();
+  syncVisualViewport();
 
   document.addEventListener('click', (event) => {
-    if (!node.contains(event.target)) close();
+    if (!node.contains(event.target) && !panel.hidden && !isCompactViewport()) close();
   });
   window.addEventListener('hashchange', () => {
     if (isMemberRoute()) window.setTimeout(() => refreshContext({ proactive: true }), 650);
   });
+  window.visualViewport?.addEventListener('resize', syncVisualViewport);
+  window.visualViewport?.addEventListener('scroll', syncVisualViewport);
   window.setTimeout(() => {
     if (isMemberRoute()) refreshContext({ proactive: true });
   }, 900);
@@ -98,36 +158,40 @@ export function MetaAiControl({ status } = {}) {
       class: 'ft-meta-ai__quick-button',
       attrs: { type: 'button' },
       text: label,
-      on: { click: () => ask(label) },
+      on: { click: () => ask(label, { spoken: false }) },
     });
   }
 
   async function open(fromNudge = false) {
     panel.hidden = false;
+    document.documentElement.classList.add('ft-griot-open');
     button.setAttribute('aria-expanded', 'true');
     nudge.hidden = true;
+    syncVisualViewport();
     await refreshContext();
     if (!messages.childElementCount) {
-      addMeta(fromNudge
+      addGriot(fromNudge
         ? proactiveOpening(state)
-        : 'Hi. Ask me what is left, what to do next, whether you are slipping, or simply tell me what is getting in the way. I will work from your current Flow rather than make you translate the problem into app language.');
+        : 'Hi — I’m Griot. Tell me what you are trying to move, what changed, or what feels stuck. You do not need to translate it into app language.');
     }
-    input.focus();
+    input.focus({ preventScroll: true });
   }
 
   function close() {
+    stopListening();
     panel.hidden = true;
+    document.documentElement.classList.remove('ft-griot-open');
     button.setAttribute('aria-expanded', 'false');
   }
 
   async function refreshContext({ proactive = false, force = false } = {}) {
-    if (state.loading) return;
+    if (state.loadingContext) return;
     if (!force && state.dashboard && Date.now() - state.lastLoadedAt < CONTEXT_CACHE_MS) {
       if (proactive) maybeOfferNudge();
       return;
     }
 
-    state.loading = true;
+    state.loadingContext = true;
     try {
       const dashboard = await call('member.dashboard');
       state.dashboard = dashboard;
@@ -137,54 +201,176 @@ export function MetaAiControl({ status } = {}) {
       button.dataset.helpIntensity = state.help.intensity;
       if (proactive) maybeOfferNudge();
     } catch {
-      helpBadge.textContent = 'Context available when signed in';
+      helpBadge.textContent = 'Signed-in context';
     } finally {
-      state.loading = false;
+      state.loadingContext = false;
     }
   }
 
-  async function ask(raw) {
+  async function ask(raw, { spoken = false } = {}) {
     const question = String(raw || '').trim();
-    if (!question) return;
+    if (!question || state.asking) return;
+
+    state.asking = true;
+    stopListening();
     input.value = '';
+    input.disabled = true;
+    sendButton.disabled = true;
+    micButton.disabled = true;
     addUser(question);
-    await refreshContext();
-    const answer = answerQuestion(question, state);
-    state.lastIntent = answer.intent || state.lastIntent;
-    state.history.push({ role: 'user', text: question }, { role: 'assistant', text: answer.text });
-    state.history = state.history.slice(-12);
-    addMeta(answer.text, answer.action);
-    if (status) status.textContent = 'Meta AI answered your question.';
+    const thinking = addThinking();
+    announce('Griot is thinking.');
+
+    try {
+      const result = await call('griot.chat', {
+        message: question,
+        history: state.history.slice(-MAX_HISTORY),
+        route: currentRoute(),
+      }, { timeout: 35000, retry: false });
+
+      thinking.remove();
+      const text = String(result?.text || '').trim();
+      if (!text) throw new Error('Griot returned an empty reply.');
+
+      const action = normaliseAction(result?.action);
+      state.history.push(
+        { role: 'user', text: question },
+        { role: 'assistant', text },
+      );
+      state.history = state.history.slice(-(MAX_HISTORY * 2));
+      addGriot(text, action);
+
+      if (spoken || state.preferences.speakReplies) {
+        document.dispatchEvent(new CustomEvent('flowtribe:griot-speak', { detail: { text } }));
+      }
+      announce('Griot answered.');
+    } catch (error) {
+      thinking.remove();
+      addGriot(conversationFailure(error));
+      announce('Griot could not answer just now.');
+    } finally {
+      state.asking = false;
+      input.disabled = false;
+      sendButton.disabled = false;
+      micButton.disabled = !state.recognition;
+      window.setTimeout(() => input.focus({ preventScroll: true }), 0);
+    }
   }
 
   function addUser(text) {
     messages.append(el('div', { class: 'ft-meta-ai__message ft-meta-ai__message--user' }, [
       el('span', { text }),
     ]));
-    messages.scrollTop = messages.scrollHeight;
+    scrollConversation();
   }
 
-  function addMeta(text, action = null) {
+  function addGriot(text, action = null) {
     const parts = [el('p', { text })];
     if (action) {
       parts.push(el('button', {
         class: 'ft-meta-ai__action',
         attrs: { type: 'button' },
         text: action.label,
-        on: {
-          click: () => {
-            close();
-            if (action.event === 'tour') {
-              document.dispatchEvent(new CustomEvent('flowtribe:tour-open'));
-              return;
-            }
-            if (action.route && currentRoute() !== action.route) navigate(action.route);
-          },
-        },
+        on: { click: () => performAction(action) },
       }));
     }
-    messages.append(el('div', { class: 'ft-meta-ai__message ft-meta-ai__message--meta' }, parts));
-    messages.scrollTop = messages.scrollHeight;
+    messages.append(el('div', { class: 'ft-meta-ai__message ft-meta-ai__message--meta ft-griot__message' }, parts));
+    scrollConversation();
+  }
+
+  function addThinking() {
+    const bubble = el('div', {
+      class: 'ft-meta-ai__message ft-meta-ai__message--meta ft-griot__thinking',
+      attrs: { 'aria-label': 'Griot is thinking' },
+    }, [
+      el('span', { text: 'Thinking' }),
+      el('span', { class: 'ft-griot__thinking-dots', text: '···' }),
+    ]);
+    messages.append(bubble);
+    scrollConversation();
+    return bubble;
+  }
+
+  function performAction(action) {
+    if (action.event === 'tour') {
+      close();
+      document.dispatchEvent(new CustomEvent('flowtribe:tour-open'));
+      return;
+    }
+    if (action.route) {
+      if (currentRoute() !== action.route) navigate(action.route);
+      if (!isCompactViewport()) close();
+    }
+  }
+
+  function configureRecognition() {
+    const Recognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!Recognition) {
+      micButton.disabled = true;
+      micButton.title = 'Speech input is not available in this browser';
+      return;
+    }
+
+    const recognition = new Recognition();
+    recognition.lang = navigator.language || 'en-GB';
+    recognition.interimResults = true;
+    recognition.continuous = false;
+    recognition.maxAlternatives = 1;
+
+    recognition.onstart = () => {
+      state.listening = true;
+      micButton.classList.add('is-listening');
+      micButton.setAttribute('aria-pressed', 'true');
+      input.placeholder = 'Listening… speak naturally';
+      announce('Listening.');
+    };
+    recognition.onresult = (event) => {
+      let transcript = '';
+      let finalTranscript = '';
+      for (let i = event.resultIndex; i < event.results.length; i += 1) {
+        const value = event.results[i][0]?.transcript || '';
+        transcript += value;
+        if (event.results[i].isFinal) finalTranscript += value;
+      }
+      if (transcript.trim()) input.value = transcript.trim();
+      if (finalTranscript.trim()) {
+        window.setTimeout(() => ask(finalTranscript.trim(), { spoken: true }), 0);
+      }
+    };
+    recognition.onerror = (event) => {
+      if (event.error !== 'aborted' && event.error !== 'no-speech') {
+        announce('I could not hear that clearly. You can try again or type instead.');
+      }
+      setListening(false);
+    };
+    recognition.onend = () => setListening(false);
+    state.recognition = recognition;
+  }
+
+  function toggleListening() {
+    if (!state.recognition || state.asking) return;
+    if (state.listening) {
+      stopListening();
+      return;
+    }
+    try {
+      state.recognition.start();
+    } catch {
+      stopListening();
+    }
+  }
+
+  function stopListening() {
+    if (!state.recognition || !state.listening) return;
+    try { state.recognition.stop(); } catch { /* Browser already stopped it. */ }
+    setListening(false);
+  }
+
+  function setListening(value) {
+    state.listening = value;
+    micButton.classList.toggle('is-listening', value);
+    micButton.setAttribute('aria-pressed', String(value));
+    input.placeholder = 'Tell Griot what is happening, or ask what to do next…';
   }
 
   function maybeOfferNudge() {
@@ -195,139 +381,65 @@ export function MetaAiControl({ status } = {}) {
     const week = state.dashboard?.week || {};
     const remaining = Math.max(0, Number(week.weeklyGoal || 0) - Number(week.postsThisWeek || 0));
     nudge.textContent = remaining > 0
-      ? `Meta AI: ${remaining} meaningful ${remaining === 1 ? 'move' : 'moves'} still to go. Want help?`
-      : 'Meta AI: your pattern suggests a little support may help. Ask me.';
+      ? `Griot: ${remaining} meaningful ${remaining === 1 ? 'move' : 'moves'} still to go. Want to work it through?`
+      : 'Griot: your recent pattern suggests a little support may help. Talk to me.';
     nudge.hidden = false;
     saveHelpHistory({ ...saved, lastNudge: today });
   }
 
+  function syncVisualViewport() {
+    const viewport = window.visualViewport;
+    const height = viewport?.height || window.innerHeight;
+    const offsetTop = viewport?.offsetTop || 0;
+    document.documentElement.style.setProperty('--ft-griot-vv-height', `${Math.round(height)}px`);
+    document.documentElement.style.setProperty('--ft-griot-vv-offset', `${Math.round(offsetTop)}px`);
+  }
+
+  function scrollConversation() {
+    messages.scrollTop = messages.scrollHeight;
+  }
+
+  function announce(text) {
+    if (status) status.textContent = text;
+  }
+
   node.open = open;
   node.refreshContext = refreshContext;
+  node.ask = ask;
   return node;
 }
 
-function answerQuestion(question, state) {
-  const q = normalise(question);
-  const data = state.dashboard;
-  const member = data?.member || {};
-  const week = data?.week || {};
-  const stats = data?.stats || {};
-  const remaining = Math.max(0, Number(week.weeklyGoal || 0) - Number(week.postsThisWeek || 0));
-  const nextAction = member.showingUp || 'one meaningful action that moves your goal';
-  const goal = member.goalTitle || 'your chosen direction';
-  const constraint = String(member.constraints || '').trim();
-  const previous = state.history[state.history.length - 1]?.text || '';
-  const followUp = /^(what if|and if|but|still|why|how about|what about|then|so)\b/.test(q) || q.length < 34;
+// Compatibility export for older isolated tests and cached modules.
+export const MetaAiControl = GriotControl;
 
-  if (/\b(date|day|today|time)\b/.test(q)) {
-    const now = new Date();
-    return { intent: 'date', text: `Today is ${new Intl.DateTimeFormat(undefined, { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }).format(now)}. The time is ${new Intl.DateTimeFormat(undefined, { hour: '2-digit', minute: '2-digit' }).format(now)}.` };
-  }
+function normaliseAction(raw) {
+  if (!raw || typeof raw !== 'object') return null;
+  const allowedRoutes = new Set(['/submit', '/adapt', '/direction', '/leaderboard', '/milestones', '/levels', '/profile', '/dashboard']);
+  if (raw.event === 'tour') return { event: 'tour', label: String(raw.label || 'Show me around') };
+  const route = String(raw.route || '');
+  if (!allowedRoutes.has(route)) return null;
+  return { route, label: String(raw.label || actionLabel(route)).slice(0, 60) };
+}
 
-  // Explicit questions about Flow/the app must outrank conversational follow-up
-  // context. Otherwise a short product question asked after a recovery exchange
-  // is incorrectly interpreted as another recovery follow-up.
-  if (/what can flow|what is flow|what.*app|how.*app|how can flow|help me understand/.test(q)) {
-    return {
-      intent: 'product',
-      text: 'Flow Tribe is for keeping meaningful goals alive when real life changes the original plan. It keeps the direction visible, turns progress into a credible next action, records lightweight evidence, adapts the route when conditions change, treats recovery as progress, and uses Tribe, milestones and levels to sustain momentum without punishing interruption.',
-      action: { label: 'Show me how it works', event: 'tour' },
-    };
-  }
-
-  if (/struggl|stuck|overwhelm|exhaust|cant |cannot |too hard|not working|giving up|still difficult|still hard/.test(q) || (followUp && state.lastIntent === 'recovery')) {
-    const constraintText = constraint ? ` You have already told Flow to plan around “${constraint}”, so that constraint should stay in the decision.` : '';
-    return {
-      intent: 'recovery',
-      text: `Then the answer is not to push harder at the same plan. Keep the destination — ${goal} — and make the next move smaller, different, or later until it becomes credible again.${constraintText} Your current definition of showing up is “${nextAction}”. If even that is too much right now, tell Flow what changed and let Adapt propose a recovery move you can actually do.`,
-      action: { label: 'Work out a recovery path', route: '/adapt' },
-    };
-  }
-
-  if (/outstanding|left|remain|need to do|what do i need|tasks?/.test(q)) {
-    if (!data) return { intent: 'work', text: 'I need your signed-in Flow data before I can tell you what remains.' };
-    if (remaining === 0) {
-      return {
-        intent: 'work',
-        text: `You have reached this week’s target of ${week.weeklyGoal} meaningful moves. You do not owe Flow extra work just to protect the number. If you want to keep moving, your current next action is “${nextAction}”.`,
-        action: { label: 'Show up', route: '/submit' },
-      };
-    }
-    return {
-      intent: 'work',
-      text: `You have ${remaining} of ${week.weeklyGoal} meaningful ${remaining === 1 ? 'move' : 'moves'} still to complete this week. Your current next action is “${nextAction}”. Flow does not currently keep a separate dated task register, so I will not pretend there are task records I cannot see.`,
-      action: { label: 'Do the next action', route: '/submit' },
-    };
-  }
-
-  if (/behind|late|running late|missed|slipping|catch up|recover/.test(q)) {
-    const context = constraint ? ` You have also told Flow to plan around “${constraint}”.` : '';
-    return {
-      intent: 'recovery',
-      text: `You do not need to repair the whole plan at once. Preserve the goal — ${goal} — and reduce the next move until it is credible today.${context} Flow Adapt is for exactly this situation: tell it what changed, inspect the revised route, and accept only the recovery move that still makes sense.`,
-      action: { label: 'Adapt this path', route: '/adapt' },
-    };
-  }
-
-  if (/next|what should i do|complete this|how do i complete|how do i do/.test(q)) {
-    return {
-      intent: 'next',
-      text: `Your current next action is “${nextAction}”. Do the smallest complete version of that action in one sitting, then record what moved. If that action is no longer realistic, do not force it — adapt the path instead.`,
-      action: { label: 'Show up now', route: '/submit' },
-    };
-  }
-
-  if (/progress|momentum|streak|how am i doing|status/.test(q)) {
-    if (!data) return { intent: 'progress', text: 'I need your signed-in Flow data before I can read your progress.' };
-    return { intent: 'progress', text: `You have recorded ${week.postsThisWeek || 0} of ${week.weeklyGoal || 0} meaningful moves this week. Your current return streak is ${stats.currentWeekStreak || 0} ${Number(stats.currentWeekStreak || 0) === 1 ? 'week' : 'weeks'}, with ${stats.allTimePosts || 0} lifetime actions. I am currently using ${labelIntensity(state.help.intensity).toLowerCase()} help because ${state.help.reason}` };
-  }
-
-  if (/goal|direction|destination/.test(q)) {
-    return {
-      intent: 'goal',
-      text: `Your current direction is “${goal}”. Flow keeps that destination visible while allowing the route to change when reality changes.`,
-      action: { label: 'Review direction', route: '/direction' },
-    };
-  }
-
-  if (/milestone|level|achievement/.test(q)) {
-    const level = data?.level?.name || 'your current Flow Level';
-    const earned = data?.milestones?.totalEarned;
-    return {
-      intent: 'milestone',
-      text: `You are at ${level}${Number.isFinite(Number(earned)) ? ` and have earned ${earned} milestones` : ''}. Milestones recognise meaningful patterns of movement and recovery; Levels show how your relationship with Flow develops over time.`,
-      action: { label: 'See milestones', route: '/milestones' },
-    };
-  }
-
-  if (/tribe|leaderboard|community|people/.test(q)) {
-    return {
-      intent: 'tribe',
-      text: 'The Tribe makes movement visible across the community so people can encourage return and momentum. It is designed to make progress social without turning people into a public failure table.',
-      action: { label: 'Open Tribe', route: '/leaderboard' },
-    };
-  }
-
-  if (/voice|speak|talk|narrat/.test(q)) {
-    return { intent: 'voice', text: 'Use Voice in the header to choose an available device voice, change speed and pitch, preview it, and turn guided-tour narration on or off.' };
-  }
-
-  if (/why\b/.test(q) && state.lastIntent) {
-    return {
-      intent: state.lastIntent,
-      text: `Because Flow is trying to protect useful movement rather than force compliance with an old plan. ${previous ? `The last thing we were working from was: “${previous.slice(0, 160)}${previous.length > 160 ? '…' : ''}”` : ''}`.trim(),
-    };
-  }
-
-  if (/help|what can you|meta ai|ask/.test(q)) {
-    return { intent: 'help', text: 'You do not need to phrase things as commands. Tell me what is happening — for example, “I have no energy today”, “I missed two days”, “I do not know where to start”, or “I have finished the target but want to keep going”. I will relate that back to your current Flow.' };
-  }
-
-  return {
-    intent: 'conversation',
-    text: `I do not want to turn that into a canned answer. Tell me what part is difficult — the goal itself, the next action “${nextAction}”, the time available, or something else that changed — and I will help you work out the next credible move.`,
-    action: { label: 'Adapt what changed', route: '/adapt' },
+function actionLabel(route) {
+  const labels = {
+    '/submit': 'Show up now',
+    '/adapt': 'Adapt this path',
+    '/direction': 'Review direction',
+    '/leaderboard': 'Open Tribe',
+    '/milestones': 'See milestones',
+    '/levels': 'See Flow Levels',
+    '/profile': 'Open profile',
+    '/dashboard': 'Back to your Flow',
   };
+  return labels[route] || 'Open';
+}
+
+function conversationFailure(error) {
+  const message = String(error?.message || '');
+  if (/session/i.test(message)) return 'Your Flow session has ended. Sign in again and I will pick up from there.';
+  if (/rate|slow down/i.test(message)) return 'I have had quite a few questions in a short burst. Give me a moment, then carry on — the conversation is still here.';
+  return 'I could not reach the intelligence behind Griot just now. Your Flow is still safe. Try again in a moment, or keep typing here and continue when the connection returns.';
 }
 
 function assessHelp(data) {
@@ -352,26 +464,56 @@ function assessHelp(data) {
   if (ratio >= 1 && streak >= 2) {
     return { intensity: 'light', reason: 'you are meeting the current rhythm consistently, so Flow can stay out of the way' };
   }
-  return { intensity: 'standard', reason: 'you are moving, but there is still useful room for contextual guidance' };
+  return { intensity: 'standard', reason: 'you are moving, but contextual guidance may still help' };
 }
 
 function proactiveOpening(state) {
   const data = state.dashboard;
-  if (!data) return 'I noticed you may benefit from a little more help. Tell me what has changed and I’ll work from there.';
-  const remaining = Math.max(0, Number(data.week?.weeklyGoal || 0) - Number(data.week?.postsThisWeek || 0));
-  return remaining > 0
-    ? `I’m offering more active help because ${state.help.reason}. You have ${remaining} meaningful ${remaining === 1 ? 'move' : 'moves'} still to go this week. Ask me what to do next or tell me what is getting in the way.`
-    : `I’m offering more active help because ${state.help.reason}. Tell me what feels stuck and I’ll point you to the right recovery move.`;
+  if (!data) return 'I noticed you may benefit from a little more help. Tell me what changed and I will work from there.';
+  const week = data.week || {};
+  const member = data.member || {};
+  const remaining = Math.max(0, Number(week.weeklyGoal || 0) - Number(week.postsThisWeek || 0));
+  if (member.constraints) return `You have an active constraint in your Flow. Tell me what is happening now and we can work out a credible next move around it.`;
+  if (remaining > 0) return `You still have ${remaining} meaningful ${remaining === 1 ? 'move' : 'moves'} in this week’s rhythm. If that feels unrealistic now, tell me what changed rather than forcing the old plan.`;
+  return 'Your current pattern suggests a little support may be useful. Tell me what is getting in the way and we can work it through.';
 }
 
 function labelIntensity(value) {
-  if (value === 'active') return 'Active';
   if (value === 'light') return 'Light-touch';
-  return 'Standard';
+  if (value === 'active') return 'Active';
+  return 'Contextual';
 }
 
 function normalise(value) {
-  return String(value || '').toLowerCase().replace(/[’']/g, '').replace(/\s+/g, ' ').trim();
+  return String(value || '').toLowerCase().replace(/[’']/g, '').replace(/[^a-z0-9\s]/g, ' ').replace(/\s+/g, ' ').trim();
+}
+
+function loadHelpHistory() {
+  try { return JSON.parse(localStorage.getItem(HELP_STORAGE_KEY) || '{}') || {}; } catch { return {}; }
+}
+
+function saveHelpHistory(value) {
+  try { localStorage.setItem(HELP_STORAGE_KEY, JSON.stringify(value)); } catch { /* Non-critical convenience. */ }
+}
+
+function loadPreferences() {
+  try {
+    const saved = JSON.parse(localStorage.getItem(PREF_STORAGE_KEY) || '{}') || {};
+    return { speakReplies: saved.speakReplies !== false };
+  } catch {
+    return { speakReplies: true };
+  }
+}
+
+function savePreferences(value) {
+  try { localStorage.setItem(PREF_STORAGE_KEY, JSON.stringify(value)); } catch { /* Non-critical convenience. */ }
+}
+
+function localDayKey() {
+  const now = new Date();
+  const month = String(now.getMonth() + 1).padStart(2, '0');
+  const day = String(now.getDate()).padStart(2, '0');
+  return `${now.getFullYear()}-${month}-${day}`;
 }
 
 function currentRoute() {
@@ -380,27 +522,9 @@ function currentRoute() {
 }
 
 function isMemberRoute() {
-  const route = (window.location.hash || '').replace(/^#/, '').split('?')[0];
-  return route && !['/login', '/register', '/demo', '/welcome', '/help/pin', '/change-pin'].includes(route);
+  return !['/login', '/register', '/welcome'].includes(currentRoute());
 }
 
-function localDayKey() {
-  const date = new Date();
-  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
-}
-
-function loadHelpHistory() {
-  try {
-    return JSON.parse(localStorage.getItem(HELP_STORAGE_KEY) || '{}') || {};
-  } catch {
-    return {};
-  }
-}
-
-function saveHelpHistory(value) {
-  try {
-    localStorage.setItem(HELP_STORAGE_KEY, JSON.stringify(value));
-  } catch {
-    /* Adaptive help remains functional without persistent storage. */
-  }
+function isCompactViewport() {
+  return window.matchMedia?.('(max-width: 720px)').matches || window.innerWidth <= 720;
 }
