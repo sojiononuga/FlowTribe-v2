@@ -3,6 +3,7 @@ import { call } from '../../core/api.js';
 import { navigate } from '../../app/navigation.js';
 
 const HELP_STORAGE_KEY = 'flowtribe.meta.help.v1';
+const CONTEXT_CACHE_MS = 30000;
 const SPARKLE_PATHS = [
   'M12 3l1.5 4.5L18 9l-4.5 1.5L12 15l-1.5-4.5L6 9l4.5-1.5L12 3z',
   'M19 14l.8 2.2L22 17l-2.2.8L19 20l-.8-2.2L16 17l2.2-.8L19 14z',
@@ -12,9 +13,9 @@ const SPARKLE_PATHS = [
 export function MetaAiControl({ status } = {}) {
   const state = {
     dashboard: null,
-    profile: null,
     help: { intensity: 'standard', reason: 'I will learn from your Flow as you use it.' },
     loading: false,
+    lastLoadedAt: 0,
   };
 
   const messages = el('div', { class: 'ft-meta-ai__messages', attrs: { role: 'log', 'aria-live': 'polite' } });
@@ -110,16 +111,18 @@ export function MetaAiControl({ status } = {}) {
     button.setAttribute('aria-expanded', 'false');
   }
 
-  async function refreshContext({ proactive = false } = {}) {
+  async function refreshContext({ proactive = false, force = false } = {}) {
     if (state.loading) return;
+    if (!force && state.dashboard && Date.now() - state.lastLoadedAt < CONTEXT_CACHE_MS) {
+      if (proactive) maybeOfferNudge();
+      return;
+    }
+
     state.loading = true;
     try {
-      const [dashboard, profile] = await Promise.all([
-        call('member.dashboard'),
-        call('profile.get').catch(() => null),
-      ]);
+      const dashboard = await call('member.dashboard');
       state.dashboard = dashboard;
-      state.profile = profile;
+      state.lastLoadedAt = Date.now();
       state.help = assessHelp(dashboard);
       helpBadge.textContent = `${labelIntensity(state.help.intensity)} help`;
       button.dataset.helpIntensity = state.help.intensity;
@@ -139,7 +142,7 @@ export function MetaAiControl({ status } = {}) {
     await refreshContext();
     const answer = answerQuestion(question, state);
     addMeta(answer.text, answer.action);
-    status && (status.textContent = 'Meta AI answered your question.');
+    if (status) status.textContent = 'Meta AI answered your question.';
   }
 
   function addUser(text) {
@@ -199,17 +202,31 @@ function answerQuestion(question, state) {
 
   if (/outstanding|left|remain|need to do|what do i need|tasks?/.test(q)) {
     if (!data) return { text: 'I need your signed-in Flow data before I can tell you what remains.' };
-    if (remaining === 0) return { text: `You have reached this week’s target of ${week.weeklyGoal} meaningful moves. Your next useful action is still “${nextAction}” if you want to keep momentum going.`, action: { label: 'Show up', route: '/submit' } };
-    return { text: `You have ${remaining} of ${week.weeklyGoal} meaningful ${remaining === 1 ? 'move' : 'moves'} still to complete this week. Your current next action is “${nextAction}”. Flow does not currently store a separate dated task list, so I will not invent one.`, action: { label: 'Do the next action', route: '/submit' } };
+    if (remaining === 0) {
+      return {
+        text: `You have reached this week’s target of ${week.weeklyGoal} meaningful moves. Your next useful action is still “${nextAction}” if you want to keep momentum going.`,
+        action: { label: 'Show up', route: '/submit' },
+      };
+    }
+    return {
+      text: `You have ${remaining} of ${week.weeklyGoal} meaningful ${remaining === 1 ? 'move' : 'moves'} still to complete this week. Your current next action is “${nextAction}”. Flow does not currently store a separate dated task list, so I will not invent one.`,
+      action: { label: 'Do the next action', route: '/submit' },
+    };
   }
 
   if (/behind|late|running late|missed|slipping|catch up|recover/.test(q)) {
     const context = member.constraints ? ` You have also told Flow to plan around: ${member.constraints}.` : '';
-    return { text: `Don’t try to repair the whole plan at once. Preserve the goal — ${goal} — and reduce the next move until it is credible today.${context} Use Flow Adapt to tell me what changed; Flow will propose a smaller recovery path and you choose whether to accept it.`, action: { label: 'Adapt this path', route: '/adapt' } };
+    return {
+      text: `Don’t try to repair the whole plan at once. Preserve the goal — ${goal} — and reduce the next move until it is credible today.${context} Use Flow Adapt to tell me what changed; Flow will propose a smaller recovery path and you choose whether to accept it.`,
+      action: { label: 'Adapt this path', route: '/adapt' },
+    };
   }
 
   if (/next|what should i do|complete this|how do i complete|how do i do/.test(q)) {
-    return { text: `Your next action is “${nextAction}”. Make it concrete enough to finish in one sitting, do that piece, then record it in Show up. If the action is no longer realistic, adapt the path instead of forcing the old plan.`, action: { label: 'Show up now', route: '/submit' } };
+    return {
+      text: `Your next action is “${nextAction}”. Make it concrete enough to finish in one sitting, do that piece, then record it in Show up. If the action is no longer realistic, adapt the path instead of forcing the old plan.`,
+      action: { label: 'Show up now', route: '/submit' },
+    };
   }
 
   if (/progress|momentum|streak|how am i doing|status/.test(q)) {
@@ -218,17 +235,26 @@ function answerQuestion(question, state) {
   }
 
   if (/goal|direction|destination/.test(q)) {
-    return { text: `Your current direction is “${goal}”. Flow keeps the destination visible while allowing the route to change when reality changes.`, action: { label: 'Review direction', route: '/direction' } };
+    return {
+      text: `Your current direction is “${goal}”. Flow keeps the destination visible while allowing the route to change when reality changes.`,
+      action: { label: 'Review direction', route: '/direction' },
+    };
   }
 
   if (/milestone|level|achievement/.test(q)) {
     const level = data?.level?.name || 'your current Flow Level';
     const earned = data?.milestones?.totalEarned;
-    return { text: `You are at ${level}${Number.isFinite(Number(earned)) ? ` and have earned ${earned} milestones` : ''}. Milestones recognise meaningful patterns of movement and recovery; Levels show how your relationship with Flow is developing over time.`, action: { label: 'See milestones', route: '/milestones' } };
+    return {
+      text: `You are at ${level}${Number.isFinite(Number(earned)) ? ` and have earned ${earned} milestones` : ''}. Milestones recognise meaningful patterns of movement and recovery; Levels show how your relationship with Flow is developing over time.`,
+      action: { label: 'See milestones', route: '/milestones' },
+    };
   }
 
   if (/tribe|leaderboard|community|people/.test(q)) {
-    return { text: 'The Tribe makes movement visible across the community so people can encourage return and momentum. It is not designed to punish people for falling behind.', action: { label: 'Open Tribe', route: '/leaderboard' } };
+    return {
+      text: 'The Tribe makes movement visible across the community so people can encourage return and momentum. It is not designed to punish people for falling behind.',
+      action: { label: 'Open Tribe', route: '/leaderboard' },
+    };
   }
 
   if (/voice|speak|talk|narrat/.test(q)) {
@@ -236,14 +262,17 @@ function answerQuestion(question, state) {
   }
 
   if (/what can flow|what is flow|what.*app|how.*work|help me understand/.test(q)) {
-    return { text: 'Flow Tribe helps you keep meaningful goals moving when life changes the plan. It keeps your direction visible, reduces progress to useful next actions, records evidence without heavy admin, adapts the route when conditions change, makes recovery part of progress, and adds Tribe, milestones and levels for sustained momentum.', action: { label: 'Show me round', route: '/dashboard' } };
+    return {
+      text: 'Flow Tribe helps you keep meaningful goals moving when life changes the plan. It keeps your direction visible, reduces progress to useful next actions, records evidence without heavy admin, adapts the route when conditions change, makes recovery part of progress, and adds Tribe, milestones and levels for sustained momentum.',
+      action: { label: 'Show me round', route: '/dashboard' },
+    };
   }
 
   if (/help|what can you|meta ai|ask/.test(q)) {
     return { text: 'Ask me about your next action, what remains this week, whether you are slipping, how to recover, your goal, progress, streak, milestones, the Tribe, today’s date, or where a Flow feature lives. I stay grounded in the Flow data the app actually has.' };
   }
 
-  return { text: `I can help with your actual Flow rather than guess. Try asking “What do I need to do?”, “Am I behind?”, “What should I do next?”, “What is my progress?”, “What date is it?”, or “How does Flow Adapt work?”` };
+  return { text: 'I can help with your actual Flow rather than guess. Try asking “What do I need to do?”, “Am I behind?”, “What should I do next?”, “What is my progress?”, “What date is it?”, or “How does Flow Adapt work?”' };
 }
 
 function assessHelp(data) {
@@ -258,7 +287,12 @@ function assessHelp(data) {
   const streak = Number(stats.currentWeekStreak || 0);
 
   if (member.constraints || (posts === 0 && recent.length === 0) || (ratio < 0.34 && streak === 0)) {
-    return { intensity: 'active', reason: member.constraints ? 'you have an active constraint and Flow should stay closer' : 'recent movement is low and a more active recovery prompt may help' };
+    return {
+      intensity: 'active',
+      reason: member.constraints
+        ? 'you have an active constraint and Flow should stay closer'
+        : 'recent movement is low and a more active recovery prompt may help',
+    };
   }
   if (ratio >= 1 && streak >= 2) {
     return { intensity: 'light', reason: 'you are meeting the current rhythm consistently, so Flow can stay out of the way' };
@@ -296,11 +330,17 @@ function localDayKey() {
 }
 
 function loadHelpHistory() {
-  try { return JSON.parse(localStorage.getItem(HELP_STORAGE_KEY) || '{}') || {}; }
-  catch { return {}; }
+  try {
+    return JSON.parse(localStorage.getItem(HELP_STORAGE_KEY) || '{}') || {};
+  } catch {
+    return {};
+  }
 }
 
 function saveHelpHistory(value) {
-  try { localStorage.setItem(HELP_STORAGE_KEY, JSON.stringify(value)); }
-  catch { /* Adaptive help remains functional without persistent storage. */ }
+  try {
+    localStorage.setItem(HELP_STORAGE_KEY, JSON.stringify(value));
+  } catch {
+    /* Adaptive help remains functional without persistent storage. */
+  }
 }
