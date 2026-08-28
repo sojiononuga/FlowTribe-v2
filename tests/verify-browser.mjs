@@ -88,6 +88,98 @@ async function verifyHarness(page, pathname, resultExpression, expectedTotal, la
   console.log(`${label}: ${expectedTotal}/${expectedTotal} passed`);
 }
 
+async function verifyHelpQuality(browser) {
+  const page = await browser.newPage({ viewport: { width: 390, height: 844 } });
+  const pageErrors = [];
+  page.on('pageerror', (error) => pageErrors.push(error.message));
+
+  await page.goto(`http://${host}:${port}/tests/help-quality.html`, { waitUntil: 'load' });
+
+  await page.evaluate(async () => {
+    const { installTourQualityGuards } = await import('../src/features/showcase/tour-quality.js');
+    const { MetaAiControl } = await import('../src/features/showcase/meta-ai.js');
+
+    installTourQualityGuards();
+
+    const fixture = document.querySelector('#fixture');
+    const main = document.createElement('main');
+    main.id = 'main';
+    main.className = 'ft-live-tour-target';
+    const profile = document.createElement('section');
+    profile.className = 'ft-profile-head';
+    profile.textContent = 'Profile feature';
+    main.append(profile);
+
+    const tour = document.createElement('div');
+    tour.className = 'ft-live-tour';
+    const panel = document.createElement('div');
+    panel.className = 'ft-live-tour__panel';
+    panel.textContent = 'Guide';
+    tour.append(panel);
+
+    const calendar = document.createElement('div');
+    calendar.className = 'ft-calendar';
+
+    fixture.append(main, tour, calendar);
+    location.hash = '#/profile';
+
+    const status = document.createElement('span');
+    fixture.append(MetaAiControl({ status }));
+  });
+
+  await page.waitForTimeout(120);
+
+  const tourTarget = await page.evaluate(() => ({
+    main: document.querySelector('#main').classList.contains('ft-live-tour-target'),
+    profile: document.querySelector('.ft-profile-head').classList.contains('ft-live-tour-target'),
+    calendarAlias: document.querySelector('.ft-calendar').classList.contains('ft-activity-calendar'),
+    placement: document.querySelector('.ft-live-tour__panel').dataset.placement || '',
+  }));
+
+  if (tourTarget.main) throw new Error('Help quality: #main remained the guided-tour target.');
+  if (!tourTarget.profile) throw new Error('Help quality: profile feature was not retargeted.');
+  if (!tourTarget.calendarAlias) throw new Error('Help quality: movement calendar compatibility target was not installed.');
+  if (!['top', 'bottom'].includes(tourTarget.placement)) throw new Error('Help quality: tour panel did not choose a viewport side.');
+
+  await page.getByRole('button', { name: 'Ask Meta AI' }).click();
+  await page.getByLabel('Ask Meta AI a question').fill('What if I am still struggling?');
+  await page.getByRole('button', { name: 'Ask', exact: true }).click();
+  await page.getByText(/not to push harder at the same plan/i).waitFor({ timeout: 5000 });
+  await page.getByText(/recovery move you can actually do/i).waitFor({ timeout: 5000 });
+
+  const overflow = await page.evaluate(() => {
+    const panel = document.querySelector('.ft-meta-ai__panel');
+    const quick = document.querySelector('.ft-meta-ai__quick');
+    const composer = document.querySelector('.ft-meta-ai__composer');
+    return {
+      panel: panel.scrollWidth - panel.clientWidth,
+      quick: quick.scrollWidth - quick.clientWidth,
+      composer: composer.scrollWidth - composer.clientWidth,
+      inputTag: document.querySelector('.ft-meta-ai__input').tagName,
+    };
+  });
+
+  if (overflow.panel > 1 || overflow.quick > 1 || overflow.composer > 1) {
+    throw new Error(`Help quality: horizontal overflow remains ${JSON.stringify(overflow)}.`);
+  }
+  if (overflow.inputTag !== 'TEXTAREA') throw new Error(`Help quality: composer is ${overflow.inputTag}, expected TEXTAREA.`);
+
+  await page.getByLabel('Ask Meta AI a question').fill('How can this app help me?');
+  await page.getByRole('button', { name: 'Ask', exact: true }).click();
+  await page.getByRole('button', { name: 'Show me how it works' }).waitFor({ timeout: 5000 });
+
+  const eventReceived = page.evaluate(() => new Promise((resolve) => {
+    document.addEventListener('flowtribe:tour-open', () => resolve(true), { once: true });
+    setTimeout(() => resolve(false), 2000);
+  }));
+  await page.getByRole('button', { name: 'Show me how it works' }).click();
+  if (!(await eventReceived)) throw new Error('Help quality: Meta tour action did not dispatch the tour event.');
+
+  if (pageErrors.length) throw new Error(`Help quality produced page errors:\n${pageErrors.join('\n')}`);
+  await page.close();
+  console.log('Help quality verification: 8/8 passed');
+}
+
 let browser;
 try {
   await listen();
@@ -122,6 +214,8 @@ try {
     'Journey verification',
   );
   await journeyPage.close();
+
+  await verifyHelpQuality(browser);
 } finally {
   if (browser) await browser.close();
   await new Promise((resolve) => server.close(resolve));
