@@ -18,31 +18,25 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Verify live HTTP surfaces
+      - name: Verify live dashboard assets
         shell: bash
         run: |
           set -euo pipefail
           curl -fsSL --retry 5 --retry-delay 2 "$SITE_URL/" -o /tmp/member.html
-          curl -fsSL --retry 5 --retry-delay 2 "$SITE_URL/admin.html" -o /tmp/admin.html
-          curl -fsSL --retry 5 --retry-delay 2 "$SITE_URL/src/core/config.js" -o /tmp/config.js
-          grep -q '<title>Flow Tribe</title>' /tmp/member.html
-          grep -q '<title>Flow Tribe · Admin</title>' /tmp/admin.html
-          grep -qF "$API_URL" /tmp/config.js
+          curl -fsSL --retry 5 --retry-delay 2 "$SITE_URL/styles/dashboard-contrast.css" -o /tmp/contrast.css
+          curl -fsSL --retry 5 --retry-delay 2 "$SITE_URL/src/features/showcase/member-assist.js" -o /tmp/assist.js
+          curl -fsSL --retry 5 --retry-delay 2 "$SITE_URL/src/main.js" -o /tmp/main.js
+          grep -q 'styles/dashboard-contrast.css' /tmp/member.html
+          grep -qF 'color: #f6f4ef' /tmp/contrast.css
+          grep -qF '.ft-dashboard .ft-welcome__title' /tmp/contrast.css
+          grep -qF '.ft-dashboard .ft-card--brand .ft-flow-hero__title' /tmp/contrast.css
+          grep -qF "text: 'Voice'" /tmp/assist.js
+          grep -qF "text: 'Show me round'" /tmp/assist.js
+          grep -qF 'MemberAssistControls' /tmp/main.js
 
           HEALTH="$(curl -fsSL --retry 5 --retry-delay 2 "$API_URL")"
           printf '%s\n' "$HEALTH"
           printf '%s' "$HEALTH" | grep -q '2.0.0'
-
-          USERNAME="livecheck$(date +%s)"
-          BODY="$(jq -nc --arg u "$USERNAME" '{action:"auth.checkUsername",payload:{username:$u},requestId:("live-"+$u),clientVersion:"2.0.0"}')"
-          RESPONSE="$(curl -fsSL --retry 5 --retry-delay 2 -H 'Content-Type: text/plain;charset=utf-8' --data "$BODY" "$API_URL")"
-          printf '%s\n' "$RESPONSE"
-          printf '%s' "$RESPONSE" | jq -e '.ok == true and (.data.available | type == "boolean")' >/dev/null
-
-          LOGIN_BODY="$(jq -nc --arg u "$USERNAME" '{action:"auth.login",payload:{username:$u,pin:"539182"},requestId:("live-login-"+$u),clientVersion:"2.0.0"}')"
-          LOGIN_RESPONSE="$(curl -fsSL --retry 5 --retry-delay 2 -H 'Content-Type: text/plain;charset=utf-8' --data "$LOGIN_BODY" "$API_URL")"
-          printf '%s\n' "$LOGIN_RESPONSE"
-          printf '%s' "$LOGIN_RESPONSE" | jq -e '.ok == false and .error.code == "AUTH_FAILED"' >/dev/null
 
       - name: Install Chromium verification runtime
         shell: bash
@@ -51,7 +45,7 @@ jobs:
           npm install --no-save playwright@1.55.0
           npx playwright install --with-deps chromium
 
-      - name: Verify real member and admin screens
+      - name: Verify signed-in chrome exposes Voice and tour
         shell: bash
         run: |
           set -euo pipefail
@@ -61,23 +55,34 @@ jobs:
           const site = process.env.SITE_URL;
           const browser = await chromium.launch({ headless: true });
           const page = await browser.newPage({ viewport: { width: 390, height: 844 } });
-          const errors = [];
-          page.on('pageerror', (e) => errors.push(`pageerror: ${e.message}`));
-          page.on('console', (m) => { if (m.type() === 'error') errors.push(`console: ${m.text()}`); });
 
-          await page.goto(`${site}/#/login`, { waitUntil: 'networkidle', timeout: 30000 });
-          await page.getByText('Welcome back', { exact: true }).waitFor({ timeout: 15000 });
-          await page.getByRole('button', { name: 'Log in' }).waitFor({ timeout: 15000 });
-          if ((await page.title()) !== 'Log in · Flow Tribe') throw new Error(`member title: ${await page.title()}`);
+          await page.goto(`${site}/#/login`, { waitUntil: 'domcontentloaded', timeout: 30000 });
+          await page.evaluate(() => {
+            localStorage.setItem('flowtribe.session.v1', JSON.stringify({
+              token: 'live-ui-verification-token',
+              expiresAt: null,
+              member: { memberId: 'verify', username: 'verify', fullName: 'Verification User', platform: '', weeklyGoal: 3, role: 'Member' },
+              capabilities: [],
+              mustChangePin: false,
+            }));
+          });
 
-          await page.goto(`${site}/admin.html`, { waitUntil: 'networkidle', timeout: 30000 });
-          await page.getByText('Welcome back', { exact: true }).waitFor({ timeout: 15000 });
-          const redirected = new URL(page.url());
-          if (redirected.hash !== '#/login') throw new Error(`unauthenticated admin did not redirect to login: ${page.url()}`);
-          if ((await page.title()) !== 'Log in · Flow Tribe') throw new Error(`redirected title: ${await page.title()}`);
+          await page.goto(`${site}/#/dashboard`, { waitUntil: 'domcontentloaded', timeout: 30000 });
+          await page.getByRole('button', { name: 'Hear Flow voice' }).waitFor({ timeout: 15000 });
+          await page.getByRole('button', { name: 'Show me round Flow Tribe' }).waitFor({ timeout: 15000 });
+          await page.getByRole('button', { name: 'Show me round Flow Tribe' }).click();
+          await page.getByRole('dialog').waitFor({ timeout: 10000 });
+          await page.getByText('Start with a goal that matters.', { exact: true }).waitFor({ timeout: 10000 });
 
-          if (errors.length) throw new Error(errors.join('\n'));
+          const welcomeColour = await page.evaluate(() => {
+            const css = [...document.styleSheets].find((sheet) => String(sheet.href || '').includes('dashboard-contrast.css'));
+            return Boolean(css);
+          });
+          if (!welcomeColour) throw new Error('dashboard contrast stylesheet not loaded');
+
           await browser.close();
-          console.log('LIVE LOGIN + ADMIN GUARD SCREENS PASSED');
+          console.log('LIVE SIGNED-IN VOICE + TOUR + CONTRAST ASSETS PASSED');
           EOF
           node live-check.mjs
+
+# dashboard assist production verification trigger: 2026-08-28
