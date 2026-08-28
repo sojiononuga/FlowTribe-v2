@@ -305,14 +305,17 @@ function ActiveGuidedTour(settings, status) {
       navigate(step.route);
     }
 
+    // Speak immediately. Target discovery and scrolling can take a moment on a
+    // newly loaded view, but the guide should never feel silent while the app
+    // catches up visually.
+    if (settings.narration) {
+      window.setTimeout(() => narrateCurrent(), 180);
+    }
+
     currentTarget = await waitForTarget(step.selector);
     if (currentTarget) {
       currentTarget.classList.add('ft-live-tour-target');
       currentTarget.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'nearest' });
-    }
-
-    if (settings.narration) {
-      window.setTimeout(() => narrateCurrent(), 350);
     }
   }
 
