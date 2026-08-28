@@ -1,14 +1,13 @@
-/* Meta AI + autonomous guided tour refinements. */
+/* Meta AI + autonomous guided tour quality refinements. */
 
 .ft-meta-ai {
   position: relative;
   display: inline-flex;
   align-items: center;
+  min-width: 0;
 }
 
-.ft-meta-ai__sparkle svg {
-  stroke-width: 1.7;
-}
+.ft-meta-ai__sparkle svg { stroke-width: 1.7; }
 
 .ft-meta-ai__button[data-help-intensity='active'] {
   box-shadow: 0 0 0 3px rgba(88, 205, 168, 0.18);
@@ -19,8 +18,11 @@
   z-index: calc(var(--ft-z-modal) + 4);
   top: calc(100% + var(--ft-space-3));
   right: 0;
-  width: min(29rem, calc(100vw - 2rem));
-  max-height: min(42rem, calc(100dvh - 5rem));
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr) auto auto;
+  width: min(27rem, calc(100vw - 2rem));
+  max-width: calc(100vw - 2rem);
+  max-height: min(38rem, calc(100dvh - 5rem));
   overflow: hidden;
   background: #f6f4ef;
   color: var(--ft-burgundy-900);
@@ -36,9 +38,12 @@
   align-items: flex-start;
   justify-content: space-between;
   gap: var(--ft-space-3);
+  min-width: 0;
   padding: var(--ft-space-5);
   border-bottom: 1px solid var(--ft-burgundy-100);
 }
+
+.ft-meta-ai__head > div { min-width: 0; }
 
 .ft-meta-ai__head strong {
   font-family: var(--ft-font-display);
@@ -51,6 +56,7 @@
   color: var(--ft-burgundy-600);
   font-size: var(--ft-text-xs);
   line-height: var(--ft-leading-relaxed);
+  overflow-wrap: anywhere;
 }
 
 .ft-meta-ai__help-badge {
@@ -68,18 +74,23 @@
   display: flex;
   flex-direction: column;
   gap: var(--ft-space-3);
-  min-height: 10rem;
-  max-height: 20rem;
+  min-width: 0;
+  min-height: 8rem;
+  overflow-x: hidden;
   overflow-y: auto;
   padding: var(--ft-space-5);
+  overscroll-behavior: contain;
 }
 
 .ft-meta-ai__message {
+  min-width: 0;
   max-width: 92%;
   padding: var(--ft-space-3) var(--ft-space-4);
   border-radius: var(--ft-radius-xl);
   font-size: var(--ft-text-sm);
   line-height: var(--ft-leading-relaxed);
+  overflow-wrap: anywhere;
+  word-break: normal;
 }
 
 .ft-meta-ai__message--meta {
@@ -108,42 +119,64 @@
 
 .ft-meta-ai__quick {
   display: flex;
+  flex-wrap: wrap;
   gap: var(--ft-space-2);
+  min-width: 0;
   padding: 0 var(--ft-space-5) var(--ft-space-4);
-  overflow-x: auto;
+  overflow: visible;
 }
 
 .ft-meta-ai__quick-button {
-  flex: 0 0 auto;
+  flex: 0 1 auto;
+  max-width: 100%;
   padding: .45rem .7rem;
   background: transparent;
   color: var(--ft-burgundy-700);
   border: 1px solid var(--ft-burgundy-200);
   border-radius: var(--ft-radius-full);
   font-size: var(--ft-text-xs);
+  line-height: 1.25;
+  white-space: normal;
+  text-align: left;
   cursor: pointer;
 }
 
 .ft-meta-ai__composer {
   display: grid;
-  grid-template-columns: 1fr auto;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: end;
   gap: var(--ft-space-2);
+  min-width: 0;
   padding: var(--ft-space-4) var(--ft-space-5) var(--ft-space-5);
   border-top: 1px solid var(--ft-burgundy-100);
+  background: #f6f4ef;
 }
 
 .ft-meta-ai__input {
+  box-sizing: border-box;
+  width: 100%;
   min-width: 0;
-  min-height: 2.75rem;
-  padding: 0 var(--ft-space-3);
+  min-height: 3rem;
+  max-height: 8rem;
+  padding: .7rem var(--ft-space-3);
+  resize: vertical;
+  overflow-y: auto;
   background: white;
   color: var(--ft-burgundy-900);
   border: 1px solid var(--ft-burgundy-200);
-  border-radius: var(--ft-radius-full);
+  border-radius: var(--ft-radius-xl);
+  font: inherit;
+  font-size: var(--ft-text-sm);
+  line-height: var(--ft-leading-relaxed);
+}
+
+.ft-meta-ai__input:focus-visible {
+  outline: 2px solid var(--ft-gold-300);
+  outline-offset: 2px;
 }
 
 .ft-meta-ai__send {
-  min-height: 2.75rem;
+  min-height: 3rem;
   padding-inline: var(--ft-space-4);
   background: var(--ft-burgundy-800);
   color: #f6f4ef;
@@ -173,58 +206,126 @@
 
 .ft-meta-ai__nudge[hidden] { display: none; }
 
-/* The tour card must always fit inside the current visual viewport. The old
-   bottom-anchored card could grow above the top edge on short browser windows. */
+/* Keep the guide near the edge of the viewport instead of covering the feature
+   being explained. The page target is scrolled to the centre above it. */
 .ft-live-tour__panel {
-  top: max(var(--ft-space-4), env(safe-area-inset-top));
-  right: var(--ft-space-5);
-  bottom: auto;
-  width: min(31rem, calc(100vw - 2rem));
-  max-height: calc(100dvh - 2rem);
+  top: auto;
+  right: auto;
+  bottom: max(var(--ft-space-4), env(safe-area-inset-bottom));
+  left: 50%;
+  width: min(58rem, calc(100vw - 2rem));
+  max-height: min(17rem, calc(100dvh - 2rem));
+  padding: var(--ft-space-5) var(--ft-space-6);
   overflow-y: auto;
   overscroll-behavior: contain;
+  transform: translateX(-50%);
 }
 
+.ft-live-tour__title {
+  max-width: 42rem;
+  font-size: var(--ft-text-xl);
+}
+
+.ft-live-tour__body { max-width: 48rem; }
+.ft-live-tour__eyebrow { margin-top: var(--ft-space-3); }
+
 .ft-live-tour__footer {
-  position: sticky;
-  bottom: calc(0px - var(--ft-space-6));
-  margin-inline: calc(0px - var(--ft-space-6));
-  margin-bottom: calc(0px - var(--ft-space-6));
-  padding: var(--ft-space-4) var(--ft-space-6) var(--ft-space-6);
-  background: linear-gradient(to bottom, rgba(246,244,239,0), #f6f4ef 28%);
+  position: static;
+  margin: var(--ft-space-4) 0 0;
+  padding: 0;
+  background: transparent;
+}
+
+/* Never let a stale selector turn the entire application canvas into a target. */
+#main.ft-live-tour-target {
+  outline: none !important;
+  box-shadow: none !important;
+}
+
+.ft-live-tour-target {
+  outline-width: 3px !important;
+  outline-offset: 5px !important;
+  box-shadow: 0 0 0 7px rgba(88, 205, 168, 0.20), var(--ft-shadow-lg) !important;
+}
+
+/* Momentum is one signal, not a badge inside a second decorative ring. */
+.ft-dashboard .ft-flow-hero::after { display: none; }
+
+.ft-dashboard .ft-flow-hero__score {
+  flex: 0 0 auto;
+  display: flex;
+  width: 8rem;
+  height: 8rem;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: .25rem;
+  padding: var(--ft-space-3);
+  background: transparent;
+  border: 1px solid rgba(88, 205, 168, 0.48);
+  border-radius: 50%;
+  text-align: center;
+}
+
+.ft-dashboard .ft-flow-hero__score-value { font-size: var(--ft-text-4xl); }
+.ft-dashboard .ft-flow-hero__score-label { line-height: 1.1; }
+
+@media (min-width: 768px) {
+  .ft-dashboard .ft-flow-hero {
+    flex-direction: row;
+    align-items: center;
+  }
+
+  .ft-dashboard .ft-flow-hero__copy { flex: 1 1 auto; }
 }
 
 @media (max-width: 900px) {
   .ft-assist__label { font-size: var(--ft-text-2xs); }
+
   .ft-meta-ai__panel {
     position: fixed;
     top: max(var(--ft-space-3), env(safe-area-inset-top));
     right: var(--ft-space-3);
+    bottom: auto;
     left: var(--ft-space-3);
     width: auto;
+    max-width: none;
     max-height: calc(100dvh - var(--ft-bottomnav-height) - 1.5rem);
   }
 }
 
 @media (max-width: 720px) {
   .ft-meta-ai__button .ft-assist__label { display: inline; }
-  .ft-meta-ai__panel { bottom: calc(var(--ft-bottomnav-height) + var(--ft-space-3)); }
-  .ft-meta-ai__messages { max-height: 32vh; }
-  .ft-meta-ai__head { flex-direction: column; }
 
-  .ft-live-tour__panel {
-    top: max(var(--ft-space-3), env(safe-area-inset-top));
-    right: var(--ft-space-3);
-    bottom: auto;
-    width: calc(100vw - var(--ft-space-6));
-    max-height: calc(100dvh - var(--ft-bottomnav-height) - 1.5rem);
-    padding: var(--ft-space-5);
+  .ft-meta-ai__panel {
+    top: var(--ft-space-3);
+    bottom: calc(var(--ft-bottomnav-height) + var(--ft-space-3));
+    max-height: none;
   }
 
-  .ft-live-tour__footer {
-    bottom: calc(0px - var(--ft-space-5));
-    margin-inline: calc(0px - var(--ft-space-5));
-    margin-bottom: calc(0px - var(--ft-space-5));
-    padding: var(--ft-space-4) var(--ft-space-5) var(--ft-space-5);
+  .ft-meta-ai__head { flex-direction: column; }
+  .ft-meta-ai__messages { min-height: 0; }
+  .ft-meta-ai__quick { padding-inline: var(--ft-space-4); }
+  .ft-meta-ai__composer { padding: var(--ft-space-3) var(--ft-space-4) var(--ft-space-4); }
+
+  .ft-live-tour__panel {
+    top: auto;
+    right: var(--ft-space-3);
+    bottom: calc(var(--ft-bottomnav-height) + var(--ft-space-3));
+    left: var(--ft-space-3);
+    width: auto;
+    max-height: 42dvh;
+    padding: var(--ft-space-4);
+    transform: none;
+  }
+
+  .ft-live-tour__title { font-size: var(--ft-text-lg); }
+  .ft-live-tour__body { font-size: var(--ft-text-sm); }
+  .ft-live-tour__footer { gap: var(--ft-space-2); }
+  .ft-live-tour__button { min-height: 2.5rem; padding-inline: var(--ft-space-3); }
+
+  .ft-dashboard .ft-flow-hero__score {
+    width: 6.75rem;
+    height: 6.75rem;
   }
 }
