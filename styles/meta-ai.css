@@ -14,6 +14,7 @@
 }
 
 .ft-meta-ai__panel {
+  box-sizing: border-box;
   position: absolute;
   z-index: calc(var(--ft-z-modal) + 4);
   top: calc(100% + var(--ft-space-3));
@@ -123,7 +124,8 @@
   gap: var(--ft-space-2);
   min-width: 0;
   padding: 0 var(--ft-space-5) var(--ft-space-4);
-  overflow: visible;
+  overflow-x: hidden;
+  overflow-y: auto;
 }
 
 .ft-meta-ai__quick-button {
@@ -142,6 +144,8 @@
 }
 
 .ft-meta-ai__composer {
+  position: relative;
+  z-index: 1;
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
   align-items: end;
@@ -290,6 +294,7 @@
     left: var(--ft-space-3);
     width: auto;
     max-width: none;
+    height: min(38rem, calc(100dvh - var(--ft-bottomnav-height) - 1.5rem));
     max-height: calc(100dvh - var(--ft-bottomnav-height) - 1.5rem);
   }
 }
@@ -299,13 +304,24 @@
 
   .ft-meta-ai__panel {
     top: var(--ft-space-3);
-    bottom: calc(var(--ft-bottomnav-height) + var(--ft-space-3));
-    max-height: none;
+    right: var(--ft-space-3);
+    bottom: auto;
+    left: var(--ft-space-3);
+    height: calc(100dvh - var(--ft-bottomnav-height) - 1.5rem);
+    max-height: calc(100dvh - var(--ft-bottomnav-height) - 1.5rem);
   }
 
-  .ft-meta-ai__head { flex-direction: column; }
-  .ft-meta-ai__messages { min-height: 0; }
-  .ft-meta-ai__quick { padding-inline: var(--ft-space-4); }
+  .ft-meta-ai__head {
+    flex-direction: row;
+    padding: var(--ft-space-4);
+  }
+
+  .ft-meta-ai__head p { font-size: var(--ft-text-2xs); }
+  .ft-meta-ai__messages { min-height: 0; padding: var(--ft-space-4); }
+  .ft-meta-ai__quick {
+    max-height: 5.5rem;
+    padding: 0 var(--ft-space-4) var(--ft-space-3);
+  }
   .ft-meta-ai__composer { padding: var(--ft-space-3) var(--ft-space-4) var(--ft-space-4); }
 
   .ft-live-tour__panel {
