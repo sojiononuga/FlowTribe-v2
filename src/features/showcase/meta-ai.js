@@ -224,6 +224,17 @@ function answerQuestion(question, state) {
     return { intent: 'date', text: `Today is ${new Intl.DateTimeFormat(undefined, { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }).format(now)}. The time is ${new Intl.DateTimeFormat(undefined, { hour: '2-digit', minute: '2-digit' }).format(now)}.` };
   }
 
+  // Explicit questions about Flow/the app must outrank conversational follow-up
+  // context. Otherwise a short product question asked after a recovery exchange
+  // is incorrectly interpreted as another recovery follow-up.
+  if (/what can flow|what is flow|what.*app|how.*app|how can flow|help me understand/.test(q)) {
+    return {
+      intent: 'product',
+      text: 'Flow Tribe is for keeping meaningful goals alive when real life changes the original plan. It keeps the direction visible, turns progress into a credible next action, records lightweight evidence, adapts the route when conditions change, treats recovery as progress, and uses Tribe, milestones and levels to sustain momentum without punishing interruption.',
+      action: { label: 'Show me how it works', event: 'tour' },
+    };
+  }
+
   if (/struggl|stuck|overwhelm|exhaust|cant |cannot |too hard|not working|giving up|still difficult|still hard/.test(q) || (followUp && state.lastIntent === 'recovery')) {
     const constraintText = constraint ? ` You have already told Flow to plan around “${constraint}”, so that constraint should stay in the decision.` : '';
     return {
@@ -299,14 +310,6 @@ function answerQuestion(question, state) {
 
   if (/voice|speak|talk|narrat/.test(q)) {
     return { intent: 'voice', text: 'Use Voice in the header to choose an available device voice, change speed and pitch, preview it, and turn guided-tour narration on or off.' };
-  }
-
-  if (/what can flow|what is flow|what.*app|how.*app|how can flow|help me understand/.test(q)) {
-    return {
-      intent: 'product',
-      text: 'Flow Tribe is for keeping meaningful goals alive when real life changes the original plan. It keeps the direction visible, turns progress into a credible next action, records lightweight evidence, adapts the route when conditions change, treats recovery as progress, and uses Tribe, milestones and levels to sustain momentum without punishing interruption.',
-      action: { label: 'Show me how it works', event: 'tour' },
-    };
   }
 
   if (/why\b/.test(q) && state.lastIntent) {
