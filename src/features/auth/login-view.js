@@ -11,6 +11,7 @@
 import { el, focusFirst } from '../../core/dom.js';
 import { Button, Field, Input, PinInput } from '../../components/ui/index.js';
 import { Logo } from '../../components/brand/index.js';
+import { FlowShowcase } from '../showcase/showcase.js';
 import { call } from '../../core/api.js';
 import { saveSession } from '../../core/session.js';
 import { toAppError } from '../../core/errors.js';
@@ -136,15 +137,10 @@ export default function LoginView() {
     [usernameField, pinField, formError, submitButton],
   );
 
-  return el('div', { class: 'ft-auth ft-animate-in' }, [
+  const auth = el('section', { class: 'ft-auth ft-auth--login' }, [
     el('div', { class: 'ft-auth__brand' }, Logo({ size: 'lg' })),
     el('h1', { class: 'ft-auth__title', text: 'Welcome back' }),
     el('p', { class: 'ft-auth__subtitle', text: 'Your goal, progress, and next useful move are waiting.' }),
-    el('a', { class: 'ft-demo-entry', attrs: { href: '#/demo' } }, [
-      el('span', { class: 'ft-demo-entry__label', text: 'NEW · FLOW INTELLIGENCE' }),
-      el('strong', { text: 'Try the interactive demo' }),
-      el('span', { text: 'See Flow adapt a real goal in under a minute.' }),
-    ]),
     form,
     el('div', { class: 'ft-auth__foot' }, [
       el('p', { class: 'ft-text-sm ft-text-muted' }, [
@@ -160,4 +156,6 @@ export default function LoginView() {
       ]),
     ]),
   ]);
+
+  return el('div', { class: 'ft-auth-layout ft-animate-in' }, [FlowShowcase(), auth]);
 }
