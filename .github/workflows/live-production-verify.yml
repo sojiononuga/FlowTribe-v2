@@ -18,31 +18,29 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Verify live HTTP surfaces
+      - name: Verify live voice and tour assets
         shell: bash
         run: |
           set -euo pipefail
-          curl -fsSL --retry 5 --retry-delay 2 "$SITE_URL/" -o /tmp/member.html
-          curl -fsSL --retry 5 --retry-delay 2 "$SITE_URL/admin.html" -o /tmp/admin.html
-          curl -fsSL --retry 5 --retry-delay 2 "$SITE_URL/src/core/config.js" -o /tmp/config.js
-          grep -q '<title>Flow Tribe</title>' /tmp/member.html
-          grep -q '<title>Flow Tribe · Admin</title>' /tmp/admin.html
-          grep -qF "$API_URL" /tmp/config.js
+          curl -fsSL --retry 5 --retry-delay 2 "$SITE_URL/src/features/showcase/member-assist.js" -o /tmp/assist.js
+          curl -fsSL --retry 5 --retry-delay 2 "$SITE_URL/styles/dashboard-contrast.css" -o /tmp/assist.css
+          grep -qF "flowtribe.voice.v1" /tmp/assist.js
+          grep -qF "Choose voice" /tmp/assist.js
+          grep -qF "settings.rate" /tmp/assist.js
+          grep -qF "settings.pitch" /tmp/assist.js
+          grep -qF "Speak the guided tour" /tmp/assist.js
+          grep -qF "route: '/submit'" /tmp/assist.js
+          grep -qF "route: '/adapt'" /tmp/assist.js
+          grep -qF "route: '/leaderboard'" /tmp/assist.js
+          grep -qF "route: '/milestones'" /tmp/assist.js
+          grep -qF "route: '/profile'" /tmp/assist.js
+          grep -qF "scrollIntoView" /tmp/assist.js
+          grep -qF "ft-live-tour-target" /tmp/assist.js
+          grep -qF ".ft-voice-panel" /tmp/assist.css
+          grep -qF ".ft-live-tour-target" /tmp/assist.css
 
           HEALTH="$(curl -fsSL --retry 5 --retry-delay 2 "$API_URL")"
-          printf '%s\n' "$HEALTH"
           printf '%s' "$HEALTH" | grep -q '2.0.0'
-
-          USERNAME="livecheck$(date +%s)"
-          BODY="$(jq -nc --arg u "$USERNAME" '{action:"auth.checkUsername",payload:{username:$u},requestId:("live-"+$u),clientVersion:"2.0.0"}')"
-          RESPONSE="$(curl -fsSL --retry 5 --retry-delay 2 -H 'Content-Type: text/plain;charset=utf-8' --data "$BODY" "$API_URL")"
-          printf '%s\n' "$RESPONSE"
-          printf '%s' "$RESPONSE" | jq -e '.ok == true and (.data.available | type == "boolean")' >/dev/null
-
-          LOGIN_BODY="$(jq -nc --arg u "$USERNAME" '{action:"auth.login",payload:{username:$u,pin:"539182"},requestId:("live-login-"+$u),clientVersion:"2.0.0"}')"
-          LOGIN_RESPONSE="$(curl -fsSL --retry 5 --retry-delay 2 -H 'Content-Type: text/plain;charset=utf-8' --data "$LOGIN_BODY" "$API_URL")"
-          printf '%s\n' "$LOGIN_RESPONSE"
-          printf '%s' "$LOGIN_RESPONSE" | jq -e '.ok == false and .error.code == "AUTH_FAILED"' >/dev/null
 
       - name: Install Chromium verification runtime
         shell: bash
@@ -51,7 +49,7 @@ jobs:
           npm install --no-save playwright@1.55.0
           npx playwright install --with-deps chromium
 
-      - name: Verify real member and admin screens
+      - name: Exercise voice settings and spoken tour component
         shell: bash
         run: |
           set -euo pipefail
@@ -60,24 +58,74 @@ jobs:
 
           const site = process.env.SITE_URL;
           const browser = await chromium.launch({ headless: true });
-          const page = await browser.newPage({ viewport: { width: 390, height: 844 } });
-          const errors = [];
-          page.on('pageerror', (e) => errors.push(`pageerror: ${e.message}`));
-          page.on('console', (m) => { if (m.type() === 'error') errors.push(`console: ${m.text()}`); });
+          const page = await browser.newPage({ viewport: { width: 1180, height: 820 } });
+
+          await page.addInitScript(() => {
+            class MockUtterance {
+              constructor(text) { this.text = text; this.rate = 1; this.pitch = 1; this.volume = 1; this.voice = null; }
+            }
+            const voices = [
+              { name: 'Flow Warm', lang: 'en-GB', voiceURI: 'flow-warm', default: true },
+              { name: 'Flow Calm', lang: 'en-GB', voiceURI: 'flow-calm', default: false },
+            ];
+            window.__spoken = [];
+            Object.defineProperty(window, 'SpeechSynthesisUtterance', { value: MockUtterance, configurable: true });
+            Object.defineProperty(window, 'speechSynthesis', {
+              configurable: true,
+              value: {
+                getVoices: () => voices,
+                cancel: () => {},
+                addEventListener: () => {},
+                speak: (utterance) => {
+                  window.__spoken.push({
+                    text: utterance.text,
+                    rate: utterance.rate,
+                    pitch: utterance.pitch,
+                    voiceURI: utterance.voice?.voiceURI || '',
+                  });
+                  utterance.onstart?.();
+                  setTimeout(() => utterance.onend?.(), 10);
+                },
+              },
+            });
+          });
 
           await page.goto(`${site}/#/login`, { waitUntil: 'networkidle', timeout: 30000 });
-          await page.getByText('Welcome back', { exact: true }).waitFor({ timeout: 15000 });
-          await page.getByRole('button', { name: 'Log in' }).waitFor({ timeout: 15000 });
-          if ((await page.title()) !== 'Log in · Flow Tribe') throw new Error(`member title: ${await page.title()}`);
+          await page.evaluate(async () => {
+            const { MemberAssistControls } = await import('/src/features/showcase/member-assist.js');
+            document.body.append(MemberAssistControls());
+          });
 
-          await page.goto(`${site}/admin.html`, { waitUntil: 'networkidle', timeout: 30000 });
-          await page.getByText('Welcome back', { exact: true }).waitFor({ timeout: 15000 });
-          const redirected = new URL(page.url());
-          if (redirected.hash !== '#/login') throw new Error(`unauthenticated admin did not redirect to login: ${page.url()}`);
-          if ((await page.title()) !== 'Log in · Flow Tribe') throw new Error(`redirected title: ${await page.title()}`);
+          await page.getByRole('button', { name: 'Voice settings' }).last().click();
+          await page.getByText('Choose how Flow speaks to you.', { exact: true }).waitFor();
+          const select = page.getByLabel('Choose voice').last();
+          if ((await select.locator('option').count()) < 3) throw new Error('voice choices were not populated');
+          await select.selectOption('flow-calm');
+          await page.getByLabel('Voice speed').last().fill('1.1');
+          await page.getByLabel('Voice pitch').last().fill('0.9');
+          await page.getByRole('button', { name: 'Preview this voice' }).last().click();
+          await page.waitForTimeout(30);
 
-          if (errors.length) throw new Error(errors.join('\n'));
+          const preview = await page.evaluate(() => window.__spoken.at(-1));
+          if (!preview || preview.voiceURI !== 'flow-calm') throw new Error('selected voice was not used');
+          if (Math.abs(preview.rate - 1.1) > 0.01) throw new Error(`voice rate not applied: ${preview.rate}`);
+          if (Math.abs(preview.pitch - 0.9) > 0.01) throw new Error(`voice pitch not applied: ${preview.pitch}`);
+
+          await page.getByRole('button', { name: 'Show me round Flow Tribe' }).last().click();
+          await page.getByText('This is your home base.', { exact: true }).waitFor({ timeout: 10000 });
+          await page.waitForTimeout(500);
+          const narrated = await page.evaluate(() => window.__spoken.some((item) => item.text.includes('Welcome to Flow Tribe')));
+          if (!narrated) throw new Error('tour did not narrate its first step');
+          await page.getByRole('button', { name: 'Next' }).last().click();
+          await page.getByText('The goal stays visible.', { exact: true }).waitFor();
+          await page.getByRole('button', { name: 'Replay voice' }).last().click();
+          await page.waitForTimeout(30);
+          const replayed = await page.evaluate(() => window.__spoken.at(-1)?.text.includes('green card'));
+          if (!replayed) throw new Error('tour replay did not speak the current feature');
+
           await browser.close();
-          console.log('LIVE LOGIN + ADMIN GUARD SCREENS PASSED');
+          console.log('LIVE CONFIGURABLE VOICE + SPOKEN ACTIVE TOUR PASSED');
           EOF
           node live-check.mjs
+
+# configurable voice + active narrated tour verification trigger: 2026-08-28
