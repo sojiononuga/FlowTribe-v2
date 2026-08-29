@@ -116,6 +116,36 @@ async function verifyHelpQuality(browser) {
     window.SpeechRecognition = FakeSpeechRecognition;
   });
 
+  await page.route('**/.netlify/functions/griot', async (route) => {
+    const raw = route.request().postData() || '{}';
+    const body = JSON.parse(raw);
+    requests.push(body);
+
+    let data = {};
+    if (body.action === 'griot.chat') {
+      const spoken = /family emergency/i.test(body.payload?.message || '');
+      data = spoken
+        ? {
+            text: 'Do not try to repay the lost evening. Protect the submission goal and choose one complete, time-boxed move tomorrow morning before the day gets noisy.',
+            action: { route: '/adapt', label: 'Shape tomorrow’s move' },
+            grounded: true,
+          }
+        : {
+            text: 'The interruption changes the route, not the destination. Keep the competition submission as the anchor and choose one credible move you can finish tomorrow.',
+            action: { event: 'tour', label: 'Show me how Flow helps' },
+            grounded: true,
+          };
+    } else if (body.action === 'griot.speak') {
+      data = { audioBase64: 'SUQz', mimeType: 'audio/mpeg', voice: 'alloy', model: 'openai/gpt-4o-mini-tts-2025-12-15' };
+    }
+
+    await route.fulfill({
+      status: 200,
+      headers: { 'content-type': 'application/json; charset=utf-8' },
+      body: JSON.stringify({ ok: true, data, meta: {} }),
+    });
+  });
+
   await page.route('https://flow.test/griot', async (route) => {
     const raw = route.request().postData() || '{}';
     const body = JSON.parse(raw);

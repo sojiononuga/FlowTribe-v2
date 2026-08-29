@@ -8,9 +8,11 @@ The user-facing product is intentionally branded Griot rather than with the name
 
 ## Underlying AI technology
 
-Griot's generative conversation is powered by the **Meta Model API**, using **Muse Spark**. The server-side integration uses Meta's OpenAI-compatible hosted chat-completions endpoint at `https://api.meta.ai/v1`. The model is configurable through a protected Apps Script Script Property; the current default implementation uses `muse-spark-1.1`.
+Griot's production conversation layer uses a **Meta Llama** model, currently **Llama 4 Maverick**, through **Netlify AI Gateway / OpenRouter**. Netlify supplies the gateway credential at function runtime, so Flow Tribe does not store a provider API key in the repository or browser.
 
-This provider relationship must be declared accurately in competition/submission material. It does not need to become the user-facing name of the assistant.
+The underlying conversational model remains Meta technology. The routing layer is Netlify AI Gateway and OpenRouter. This provider relationship should be declared accurately in competition/submission material without turning the provider name into the user-facing identity of the assistant.
+
+The earlier Apps Script implementation using the Meta Model API / Muse Spark remains in the repository as a governed fallback and deployment handoff, but the production web client no longer depends on deploying Griot actions into Apps Script.
 
 ## Conversation architecture
 
@@ -18,32 +20,27 @@ Typed and spoken input enter the same Griot conversation path:
 
 1. The member types a message or uses the microphone.
 2. Browser speech recognition converts spoken input to text when that capability is available.
-3. The Flow Tribe client sends the message, a short recent conversation window and the current application route to the authenticated `griot.chat` action.
-4. The server constructs a deliberately minimal Flow context from the authenticated member's current direction, rhythm, constraints and recent movement.
-5. The server calls the Meta Model API with the Griot system instructions and that bounded context.
-6. Griot returns a conversational answer and, when useful, one whitelisted Flow action such as Show up, Adapt or Review direction.
-7. The same selected on-device Griot voice can speak the response and narrate the guided tour.
+3. The Flow Tribe client sends the message, a short recent conversation window, the current application route and the existing Flow session token to the same-origin Netlify Griot Function.
+4. The Function validates that session against the existing Flow Tribe Apps Script backend and requests the authenticated member's dashboard context.
+5. The Function reduces that response to a deliberately small Flow context covering direction, rhythm, constraints and recent movement.
+6. The Function calls Meta Llama through Netlify AI Gateway / OpenRouter with the Griot system instructions and bounded context.
+7. Griot returns a conversational answer and, when useful, one whitelisted Flow action such as Show up, Adapt or Review direction.
+8. The same server-generated Griot voice can speak the response and narrate the guided tour.
 
 ## Data minimisation and security
 
-The Meta Model API credential is stored only in Apps Script Script Properties and is never sent to the browser.
+Provider credentials are injected by Netlify AI Gateway only inside the serverless function runtime. They are not committed to GitHub, stored in browser code or sent to the member.
 
-The Griot model context intentionally excludes authentication tokens, PIN material, credentials, email addresses, phone numbers and administrative data. Conversation history is capped, strings are length-limited, model-recommended navigation is mapped through a fixed allow-list, and `griot.chat` is authenticated and rate-limited through the existing Flow Tribe security boundary.
+The Griot model context intentionally excludes authentication tokens, PIN material, credentials, email addresses, phone numbers and administrative data. The Flow session token is used only server-to-server to validate the existing Flow session and retrieve the member's authorised dashboard context; it is not included in the model prompt.
 
-The browser never decides which member's Flow context is sent. The server derives the member from the authenticated session.
+Conversation history is capped, strings are length-limited, model-recommended navigation is mapped through a fixed allow-list, and the browser never chooses which member's Flow context is supplied. The authenticated Flow backend remains the source of member identity and authorisation.
 
-## Voice
+## Voice layer
 
-Griot does not expose the operating system's full voice catalogue. Flow Tribe selects a small number of suitable English voices from those genuinely available on the device and presents them as product choices such as **Griot — Warm & grounded**, **Calm Guide** and **Clear Coach**.
+Griot speech is generated server-side through **OpenRouter's dedicated speech API**, reached through Netlify AI Gateway using the same server-only gateway credential as the conversation layer. The current production target is `openai/gpt-4o-mini-tts-2025-12-15` with one fixed `alloy` voice so desktop and mobile hear the same identity.
 
-An **African English** option is shown only when the device actually provides a matching African-English voice locale. Flow Tribe does not simulate an accent through pitch manipulation.
-
-Speech synthesis and browser speech recognition are device/browser capabilities; the generative conversational answer itself comes from the Meta Model API-powered Griot server path.
+The speech boundary explicitly renders the written name **Griot** as **“Gree-oh”** and instructs the voice never to pronounce the final T. Device speech synthesis remains fallback-only if server speech is unavailable. The fixed production voice can be changed later as a single product decision after live audition; Flow Tribe does not expose an operating-system voice catalogue.
 
 ## Mobile treatment
 
 Griot is designed as a first-class mobile interaction. The conversation surface tracks the browser's visual viewport so the on-screen keyboard and mobile browser chrome do not bury the composer. The input uses a mobile-safe font size, microphone/send controls meet touch-target expectations, safe-area insets are respected, and the conversation keeps a single shared history whether the member types or speaks.
-
-## Voice layer
-
-Griot speech is generated server-side through the OpenAI Speech API so the audible identity is consistent across desktop and mobile. The production default is `gpt-4o-mini-tts` with the `cedar` voice; the credential remains in Apps Script Script Properties. The speech boundary explicitly renders the written name **Griot** as **“Gree-oh”**. Device speech synthesis is fallback-only.
