@@ -27,7 +27,7 @@ jobs:
         run: cp src/core/config.example.js src/core/config.js
 
       - name: Verify JavaScript syntax
-        run: find src tests -type f \( -name '*.js' -o -name '*.mjs' \) -print0 | xargs -0 -n1 node --check
+        run: find src tests netlify -type f \( -name '*.js' -o -name '*.mjs' \) -print0 | xargs -0 -n1 node --check
 
       - name: Install verification tooling
         run: |
