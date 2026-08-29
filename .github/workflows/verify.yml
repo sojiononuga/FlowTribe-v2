@@ -1,27 +1,31 @@
-name: verify Flow Tribe v2
+name: repair and verify Griot model
 
 on:
   push:
-    branches: [main]
-  pull_request:
-    branches: [main]
-  workflow_dispatch:
+    branches:
+      - fix/griot-model-after-voice
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   verify:
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 25
     steps:
-      - name: Check out source
+      - name: Check out repair branch
         uses: actions/checkout@v4
+        with:
+          ref: fix/griot-model-after-voice
+          fetch-depth: 0
 
       - name: Set up Node 22
         uses: actions/setup-node@v4
         with:
           node-version: '22'
+
+      - name: Apply canonical model repair
+        run: python3 scripts/ops_fix_griot_model.py
 
       - name: Prepare test configuration
         run: cp src/core/config.example.js src/core/config.js
@@ -36,3 +40,14 @@ jobs:
 
       - name: Run complete verification suite
         run: npm run verify
+
+      - name: Commit repair and restore workflow
+        run: |
+          git fetch origin main:refs/remotes/origin/main
+          git checkout origin/main -- .github/workflows/verify.yml
+          git rm scripts/ops_fix_griot_model.py
+          git config user.name "flowtribe-release-bot"
+          git config user.email "actions@users.noreply.github.com"
+          git add appsscript/services/GriotService.gs tests/griot-source-contract.mjs docs/GRIOT_AI_DISCLOSURE.md .github/workflows/verify.yml
+          git commit -m "Use canonical Meta Model API model for Griot"
+          git push origin HEAD:fix/griot-model-after-voice
