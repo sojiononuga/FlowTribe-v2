@@ -5243,7 +5243,7 @@ var AnalyticsService = (function () {
  */
 
 var GriotService = (function () {
-  var DEFAULT_MODEL = 'muse-spark-1.2';
+  var DEFAULT_MODEL = 'muse-spark-1.1';
   var API_URL = 'https://api.meta.ai/v1/chat/completions';
   var MAX_HISTORY = 10;
   var OPENAI_SPEECH_URL = 'https://api.openai.com/v1/audio/speech';
