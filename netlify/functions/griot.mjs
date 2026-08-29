@@ -1,7 +1,7 @@
 const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwWWVFp0K9oJKkZsnOackCSCmeAUPxZLRANX9v1YN0Dl-Y3VdTg_4Qp5_s-arhYZuOB/exec';
 const CHAT_MODEL = 'meta-llama/llama-4-maverick';
-const SPEECH_MODEL = 'gpt-4o-mini-tts';
-const SPEECH_VOICE = 'cedar';
+const SPEECH_MODEL = 'openai/gpt-4o-mini-tts-2025-12-15';
+const SPEECH_VOICE = 'alloy';
 const MAX_HISTORY = 10;
 const MAX_MESSAGE = 1600;
 const MAX_SPEECH = 3500;
@@ -110,8 +110,8 @@ async function speak(token, payload, requestBody) {
   const sessionEnvelope = await flowCall('auth.session', token, {}, requestBody);
   if (!sessionEnvelope.ok) return passthrough(sessionEnvelope);
 
-  const baseUrl = process.env.OPENAI_BASE_URL;
-  const apiKey = process.env.OPENAI_API_KEY;
+  const baseUrl = process.env.OPENROUTER_BASE_URL;
+  const apiKey = process.env.OPENROUTER_API_KEY;
   if (!baseUrl || !apiKey) {
     return jsonEnvelope(false, null, { code: 'SERVER_ERROR', message: 'Griot voice is not available just now.' }, 503);
   }
@@ -121,7 +121,7 @@ async function speak(token, payload, requestBody) {
 
   let provider;
   try {
-    provider = await fetch(`${baseUrl.replace(/\/$/, '')}/v1/audio/speech`, {
+    provider = await fetch(`${baseUrl.replace(/\/$/, '')}/audio/speech`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
