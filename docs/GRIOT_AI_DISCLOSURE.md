@@ -8,7 +8,7 @@ The user-facing product is intentionally branded Griot rather than with the name
 
 ## Underlying AI technology
 
-Griot's generative conversation is powered by the **Meta Model API**, using **Muse Spark**. The server-side integration uses Meta's OpenAI-compatible hosted chat-completions endpoint at `https://api.meta.ai/v1`. The model is configurable through a protected Apps Script Script Property; the current default implementation uses `muse-spark-1.2`.
+Griot's generative conversation is powered by the **Meta Model API**, using **Muse Spark**. The server-side integration uses Meta's OpenAI-compatible hosted chat-completions endpoint at `https://api.meta.ai/v1`. The model is configurable through a protected Apps Script Script Property; the current default implementation uses `muse-spark-1.1`.
 
 This provider relationship must be declared accurately in competition/submission material. It does not need to become the user-facing name of the assistant.
 
