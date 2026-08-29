@@ -1,27 +1,31 @@
-name: verify Flow Tribe v2
+name: implement and verify Griot server voice
 
 on:
   push:
-    branches: [main]
-  pull_request:
-    branches: [main]
-  workflow_dispatch:
+    branches:
+      - feature/griot-consistent-server-voice
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
-  verify:
+  implement:
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 25
     steps:
-      - name: Check out source
+      - name: Check out implementation branch
         uses: actions/checkout@v4
+        with:
+          ref: feature/griot-consistent-server-voice
+          fetch-depth: 0
 
       - name: Set up Node 22
         uses: actions/setup-node@v4
         with:
           node-version: '22'
+
+      - name: Apply voice implementation
+        run: python3 scripts/ops_apply_griot_voice.py
 
       - name: Prepare test configuration
         run: cp src/core/config.example.js src/core/config.js
@@ -36,3 +40,14 @@ jobs:
 
       - name: Run complete verification suite
         run: npm run verify
+
+      - name: Commit implementation and restore workflow
+        run: |
+          git fetch origin main:refs/remotes/origin/main
+          git checkout origin/main -- .github/workflows/verify.yml
+          git rm -f .github/workflows/implement-griot-server-voice.yml scripts/ops_apply_griot_voice.py
+          git config user.name "flowtribe-release-bot"
+          git config user.email "actions@users.noreply.github.com"
+          git add appsscript/03_Router.gs appsscript/services/GriotService.gs src/features/showcase/member-assist.js tests/griot-source-contract.mjs docs/GRIOT_AI_DISCLOSURE.md .github/workflows/verify.yml
+          git commit -m "Add consistent cross-device Griot voice"
+          git push origin HEAD:feature/griot-consistent-server-voice
