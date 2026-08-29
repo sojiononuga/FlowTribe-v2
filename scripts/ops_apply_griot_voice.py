@@ -1,0 +1,257 @@
+from pathlib import Path
+import re
+
+service_path = Path('appsscript/services/GriotService.gs')
+service = service_path.read_text()
+service = service.replace(
+    "  var MAX_HISTORY = 10;",
+    "  var MAX_HISTORY = 10;\n  var OPENAI_SPEECH_URL = 'https://api.openai.com/v1/audio/speech';\n  var DEFAULT_SPEECH_MODEL = 'gpt-4o-mini-tts';\n  var DEFAULT_SPEECH_VOICE = 'cedar';"
+)
+speak_fn = r'''
+
+  function speak(ctx) {
+    Validate.required(ctx.payload, ['text']);
+    RateLimit.check('griot-voice', ctx.member.memberId, 45, 300);
+
+    var text = Validate.str(ctx.payload.text, 3500);
+    var props = PropertiesService.getScriptProperties();
+    var key = props.getProperty('FT_GRIOT_OPENAI_API_KEY') || props.getProperty('OPENAI_API_KEY') || '';
+    if (!key) {
+      throw fail_('SERVER_ERROR', 'Griot voice is not configured yet.', {
+        internal: 'Missing OpenAI speech credential in Script Properties',
+      });
+    }
+
+    var requestedRate = Number(ctx.payload.rate || 0.92);
+    var pace = requestedRate < 0.9 ? 'slightly unhurried' : requestedRate > 1.02 ? 'slightly brisk' : 'natural and measured';
+    var request = {
+      model: props.getProperty('FT_GRIOT_OPENAI_TTS_MODEL') || DEFAULT_SPEECH_MODEL,
+      voice: props.getProperty('FT_GRIOT_OPENAI_VOICE') || DEFAULT_SPEECH_VOICE,
+      input: speechText_(text),
+      response_format: 'mp3',
+      instructions: 'You are the voice of Griot, pronounced GREE-oh. Speak with warm, grounded confidence, clear diction and a ' + pace + ' conversational pace. Never pronounce the final T in Griot.',
+    };
+
+    var response;
+    try {
+      response = UrlFetchApp.fetch(OPENAI_SPEECH_URL, {
+        method: 'post',
+        contentType: 'application/json',
+        headers: { Authorization: 'Bearer ' + key },
+        payload: JSON.stringify(request),
+        muteHttpExceptions: true,
+      });
+    } catch (error) {
+      Logger_.warn('griot-voice', 'OpenAI speech request failed', { internal: String(error) });
+      throw fail_('SERVER_ERROR', 'Griot voice could not start just now.');
+    }
+
+    var status = response.getResponseCode();
+    if (status < 200 || status >= 300) {
+      Logger_.warn('griot-voice', 'OpenAI speech returned HTTP ' + status, {
+        internal: (response.getContentText() || '').slice(0, 800),
+      });
+      throw fail_('SERVER_ERROR', 'Griot voice could not start just now.');
+    }
+
+    return {
+      audioBase64: Utilities.base64Encode(response.getBlob().getBytes()),
+      mimeType: 'audio/mpeg',
+      voice: request.voice,
+      model: request.model,
+    };
+  }
+'''
+anchor = "\n  function credentials_() {"
+if "function speak(ctx)" not in service:
+    if anchor not in service:
+        raise SystemExit('Griot credentials anchor missing')
+    service = service.replace(anchor, speak_fn + anchor)
+helpers = r'''
+
+  function speechText_(text) {
+    return String(text || '')
+      .replace(/\bGriot\b/gi, 'Gree-oh');
+  }
+'''
+if "function speechText_(text)" not in service:
+    if "\n  return { chat: chat };" not in service:
+        raise SystemExit('Griot return anchor missing')
+    service = service.replace("\n  return { chat: chat };", helpers + "\n  return { chat: chat, speak: speak };")
+else:
+    service = service.replace("return { chat: chat };", "return { chat: chat, speak: speak };")
+service_path.write_text(service)
+
+router_path = Path('appsscript/03_Router.gs')
+router = router_path.read_text()
+route_line = "    'griot.speak': { capability: 'dashboard:self', handler: GriotService.speak },"
+if route_line not in router:
+    anchor = "    'griot.chat': { capability: 'dashboard:self', handler: GriotService.chat },"
+    if anchor not in router:
+        raise SystemExit('Griot router anchor missing')
+    router = router.replace(anchor, anchor + "\n" + route_line)
+router_path.write_text(router)
+
+assist_path = Path('src/features/showcase/member-assist.js')
+assist = assist_path.read_text()
+if "import { call } from '../../core/api.js';" not in assist:
+    assist = assist.replace(
+        "import { el, icon } from '../../core/dom.js';",
+        "import { el, icon } from '../../core/dom.js';\nimport { call } from '../../core/api.js';"
+    )
+assist = assist.replace(
+    "body: 'Instead of a long device-voice catalogue, Flow offers a few context-appropriate voices. The same chosen voice reads Griot replies and the guided tour.',",
+    "body: 'Griot has one consistent server voice across desktop and mobile. Device speech is fallback only.',"
+)
+assist = assist.replace(
+    "narration: 'Finally, the Voice control gives you a small set of voices selected for Flow rather than a long operating system catalogue. The same chosen voice can read Griot replies and guide this tour. Show me round remains self running, and you can pause, go back, replay or jump ahead whenever you want control.',",
+    "narration: 'Finally, Griot has one consistent voice across desktop and mobile rather than a changing operating system voice. The same voice reads Griot replies and guides this tour. Show me round remains self running, and you can pause, go back, replay or jump ahead whenever you want control.',"
+)
+refresh_pattern = re.compile(r"  function refreshVoices\(\) \{.*?\n  panel\.refreshVoices = refreshVoices;", re.S)
+refresh_replacement = '''  function refreshVoices() {
+    voiceSelect.replaceChildren(el('option', {
+      attrs: { value: 'griot-server' },
+      text: 'Griot — consistent voice',
+    }));
+    voiceSelect.value = 'griot-server';
+    voiceSelect.disabled = true;
+    settings.voiceURI = 'griot-server';
+    saveVoiceSettings(settings);
+  }
+
+  panel.refreshVoices = refreshVoices;'''
+assist, count = refresh_pattern.subn(refresh_replacement, assist, count=1)
+if count != 1:
+    raise SystemExit('Could not replace refreshVoices')
+
+assist = assist.replace(
+    "    if (speaking && supportsSpeech()) window.speechSynthesis.cancel();\n    speaking = false;",
+    "    stopVoicePlayback();\n    speaking = false;"
+)
+
+speak_pattern = re.compile(r"function speakText\(text, settings, status, callbacks = \{\}\) \{.*?\n\}\n\nfunction supportsSpeech\(\)", re.S)
+speak_replacement = r'''let activeVoiceAudio = null;
+let activeVoiceUrl = '';
+let voiceRequestToken = 0;
+
+function speakText(text, settings, status, callbacks = {}) {
+  const token = ++voiceRequestToken;
+  stopVoicePlayback({ preserveToken: true });
+  status.textContent = 'Griot is preparing voice.';
+
+  call('griot.speak', { text: String(text || ''), rate: settings.rate }, { timeout: 35000, retry: false })
+    .then((result) => {
+      if (token !== voiceRequestToken) return;
+      const encoded = String(result?.audioBase64 || '');
+      if (!encoded) throw new Error('No speech audio returned.');
+      const mimeType = String(result?.mimeType || 'audio/mpeg');
+      const binary = window.atob(encoded);
+      const bytes = new Uint8Array(binary.length);
+      for (let i = 0; i < binary.length; i += 1) bytes[i] = binary.charCodeAt(i);
+      const blob = new Blob([bytes], { type: mimeType });
+      activeVoiceUrl = URL.createObjectURL(blob);
+      const audio = new Audio(activeVoiceUrl);
+      activeVoiceAudio = audio;
+      audio.onplay = () => {
+        if (token !== voiceRequestToken) return;
+        status.textContent = 'Griot is speaking.';
+        callbacks.onStart?.();
+      };
+      audio.onended = () => {
+        if (token !== voiceRequestToken) return;
+        cleanupServerAudio();
+        status.textContent = 'Griot voice ready.';
+        callbacks.onEnd?.();
+      };
+      audio.onerror = () => {
+        if (token !== voiceRequestToken) return;
+        cleanupServerAudio();
+        speakDeviceFallback(text, settings, status, callbacks, token);
+      };
+      return audio.play().catch(() => {
+        if (token === voiceRequestToken) {
+          cleanupServerAudio();
+          speakDeviceFallback(text, settings, status, callbacks, token);
+        }
+      });
+    })
+    .catch(() => {
+      if (token === voiceRequestToken) speakDeviceFallback(text, settings, status, callbacks, token);
+    });
+}
+
+function speakDeviceFallback(text, settings, status, callbacks, token) {
+  if (!supportsSpeech()) {
+    status.textContent = 'Griot voice is unavailable right now.';
+    callbacks.onError?.();
+    return;
+  }
+  window.speechSynthesis.cancel();
+  const spokenText = String(text || '').replace(/\bGriot\b/gi, 'Gree-oh');
+  const utterance = new SpeechSynthesisUtterance(spokenText);
+  utterance.rate = settings.rate;
+  utterance.pitch = 1;
+  utterance.volume = 1;
+  utterance.onstart = () => {
+    if (token !== voiceRequestToken) return;
+    status.textContent = 'Griot is speaking with the device fallback.';
+    callbacks.onStart?.();
+  };
+  utterance.onend = () => {
+    if (token !== voiceRequestToken) return;
+    status.textContent = 'Griot voice ready.';
+    callbacks.onEnd?.();
+  };
+  utterance.onerror = () => {
+    if (token !== voiceRequestToken) return;
+    status.textContent = 'Griot voice could not start.';
+    callbacks.onError?.();
+  };
+  window.speechSynthesis.speak(utterance);
+}
+
+function cleanupServerAudio() {
+  if (activeVoiceAudio) {
+    activeVoiceAudio.onplay = null;
+    activeVoiceAudio.onended = null;
+    activeVoiceAudio.onerror = null;
+    activeVoiceAudio = null;
+  }
+  if (activeVoiceUrl) {
+    URL.revokeObjectURL(activeVoiceUrl);
+    activeVoiceUrl = '';
+  }
+}
+
+function stopVoicePlayback({ preserveToken = false } = {}) {
+  if (!preserveToken) voiceRequestToken += 1;
+  if (activeVoiceAudio) {
+    try { activeVoiceAudio.pause(); } catch { /* Already stopped. */ }
+  }
+  cleanupServerAudio();
+  if (supportsSpeech()) window.speechSynthesis.cancel();
+}
+
+function supportsSpeech()'''
+assist, count = speak_pattern.subn(lambda _: speak_replacement, assist, count=1)
+if count != 1:
+    raise SystemExit('Could not replace speakText')
+assist_path.write_text(assist)
+
+test_path = Path('tests/griot-source-contract.mjs')
+test = test_path.read_text()
+test = test.replace(
+    "assert(router.includes(\"'griot.chat': { capability: 'dashboard:self'\"), 'griot.chat must be authenticated by the existing dashboard capability.');",
+    "assert(router.includes(\"'griot.chat': { capability: 'dashboard:self'\"), 'griot.chat must be authenticated by the existing dashboard capability.');\nassert(router.includes(\"'griot.speak': { capability: 'dashboard:self'\"), 'griot.speak must be authenticated by the existing dashboard capability.');"
+)
+test = test.replace(
+    "assert(assist.includes('Griot — Warm & grounded'), 'The curated Griot voice palette is missing.');\nassert(!assist.includes('for (const voice of voices)'), 'Do not expose the raw operating-system voice catalogue.');",
+    "assert(service.includes('https://api.openai.com/v1/audio/speech'), 'Griot voice must use the OpenAI speech endpoint.');\nassert(service.includes(\"DEFAULT_SPEECH_MODEL = 'gpt-4o-mini-tts'\"), 'Griot voice must use the speech model by default.');\nassert(service.includes(\"DEFAULT_SPEECH_VOICE = 'cedar'\"), 'Griot must have one stable server voice by default.');\nassert(service.includes(\"getProperty('FT_GRIOT_OPENAI_API_KEY')\"), 'OpenAI speech credential must stay server-side in Script Properties.');\nassert(service.includes(\"replace(/\\\\bGriot\\\\b/gi, 'Gree-oh')\"), 'Server speech must enforce Griot → Gree-oh pronunciation.');\nassert(assist.includes(\"call('griot.speak'\"), 'Voice playback must use the authenticated server speech action first.');\nassert(assist.includes(\"text: 'Griot — consistent voice'\"), 'The UI must expose one consistent Griot voice rather than device-specific aliases.');\nassert(assist.includes(\"replace(/\\\\bGriot\\\\b/gi, 'Gree-oh')\"), 'Device fallback must also pronounce Griot as Gree-oh.');\nassert(!assist.includes('for (const voice of voices)'), 'Do not expose the raw operating-system voice catalogue.');"
+)
+test_path.write_text(test)
+
+docs = Path('docs/GRIOT_AI_DISCLOSURE.md')
+if docs.exists():
+    text = docs.read_text()
+    if '## Voice layer' not in text:
+        docs.write_text(text.rstrip() + "\n\n## Voice layer\n\nGriot speech is generated server-side through the OpenAI Speech API so the audible identity is consistent across desktop and mobile. The production default is `gpt-4o-mini-tts` with the `cedar` voice; the credential remains in Apps Script Script Properties. The speech boundary explicitly renders the written name **Griot** as **“Gree-oh”**. Device speech synthesis is fallback-only.\n")
