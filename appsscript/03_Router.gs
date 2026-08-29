@@ -49,6 +49,7 @@ function getActionTable_() {
 
     // --- Griot conversational intelligence ---
     'griot.chat': { capability: 'dashboard:self', handler: GriotService.chat },
+    'griot.speak': { capability: 'dashboard:self', handler: GriotService.speak },
 
     // --- Milestones and levels ---
     'milestones.list': { capability: 'dashboard:self', handler: MemberController.milestones },

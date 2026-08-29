@@ -43,3 +43,7 @@ Speech synthesis and browser speech recognition are device/browser capabilities;
 ## Mobile treatment
 
 Griot is designed as a first-class mobile interaction. The conversation surface tracks the browser's visual viewport so the on-screen keyboard and mobile browser chrome do not bury the composer. The input uses a mobile-safe font size, microphone/send controls meet touch-target expectations, safe-area insets are respected, and the conversation keeps a single shared history whether the member types or speaks.
+
+## Voice layer
+
+Griot speech is generated server-side through the OpenAI Speech API so the audible identity is consistent across desktop and mobile. The production default is `gpt-4o-mini-tts` with the `cedar` voice; the credential remains in Apps Script Script Properties. The speech boundary explicitly renders the written name **Griot** as **“Gree-oh”**. Device speech synthesis is fallback-only.
