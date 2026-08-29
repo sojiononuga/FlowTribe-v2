@@ -25,12 +25,12 @@ assert(manifest.oauthScopes.includes('https://www.googleapis.com/auth/script.ext
 assert(api.includes("const GRIOT_ENDPOINT = '/.netlify/functions/griot'"), 'Griot client actions must route through the same-origin Netlify Function.');
 assert(api.includes("new Set(['griot.chat', 'griot.speak'])"), 'Both Griot chat and speech must use the Netlify runtime.');
 assert(gateway.includes("CHAT_MODEL = 'meta-llama/llama-4-maverick'"), 'Griot conversation must stay on a Meta Llama model through the gateway.');
-assert(gateway.includes('process.env.OPENROUTER_BASE_URL') && gateway.includes('process.env.OPENROUTER_API_KEY'), 'Griot conversation must use Netlify AI Gateway OpenRouter credentials.');
-assert(gateway.includes('process.env.OPENAI_BASE_URL') && gateway.includes('process.env.OPENAI_API_KEY'), 'Griot speech must use Netlify AI Gateway OpenAI credentials.');
+assert(gateway.includes('process.env.OPENROUTER_BASE_URL') && gateway.includes('process.env.OPENROUTER_API_KEY'), 'Griot must use Netlify AI Gateway OpenRouter credentials.');
 assert(gateway.includes("flowCall('member.dashboard'"), 'Griot chat must validate the member session and ground itself in Flow dashboard context.');
 assert(gateway.includes("flowCall('auth.session'"), 'Griot speech must validate the existing Flow session before generating audio.');
-assert(gateway.includes("SPEECH_MODEL = 'gpt-4o-mini-tts'"), 'Griot voice must use the speech model by default.');
-assert(gateway.includes("SPEECH_VOICE = 'cedar'"), 'Griot must retain one stable server voice by default.');
+assert(gateway.includes("SPEECH_MODEL = 'openai/gpt-4o-mini-tts-2025-12-15'"), 'Griot voice must use the OpenRouter speech model.');
+assert(gateway.includes("SPEECH_VOICE = 'alloy'"), 'Griot must retain one stable server voice by default.');
+assert(gateway.includes("/audio/speech`"), 'Griot voice must use OpenRouter dedicated speech endpoint.');
 assert(gateway.includes("replace(/\\bGriot\\b/gi, 'Gree-oh')"), 'Server speech must enforce Griot → Gree-oh pronunciation.');
 assert(!/sk-(?:proj-)?[A-Za-z0-9_-]{20,}/.test(gateway), 'Netlify Griot runtime must never contain a literal provider credential.');
 assert(!/Bearer\s+[A-Za-z0-9_-]{20,}/.test(gateway), 'Netlify Griot runtime must never contain a literal bearer credential.');
