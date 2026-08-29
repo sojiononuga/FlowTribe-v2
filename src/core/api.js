@@ -4,7 +4,13 @@
  * The only file in the application that calls `fetch`. Everything else goes
  * through `call(action, payload)`.
  *
- * Transport decisions, all of which are corrections of specific v1 faults:
+ * Most actions go to Apps Script. Griot chat and speech are deliberately
+ * routed through the same-origin Netlify Function so their AI runtime can be
+ * deployed independently while still validating the member's Flow session
+ * against Apps Script.
+ *
+ * Apps Script transport decisions, all of which are corrections of specific
+ * v1 faults:
  *
  *   POST only. v1 sent PINs as GET query parameters, where they were recorded
  *   in browser history, referrer headers, and Apps Script execution logs.
@@ -20,10 +26,6 @@
  *   checkmark for posts that were never recorded. This client reads real
  *   responses and reports real failures.
  *
- *   Every response is HTTP 200; success lives in the envelope's `ok` flag.
- *   Apps Script's own error pages are unhelpful HTML, so status codes are
- *   not a reliable signal.
- *
  * @module core/api
  */
 
@@ -32,16 +34,16 @@ import { AppError, ErrorCode, toAppError } from './errors.js';
 import { clearSession, getToken, touchSession } from './session.js';
 
 /** Actions that must never carry a token. */
-// Must mirror the four `capability: null` entries in appsscript/03_Router.gs.
-// `system.health` was missing, so health() — the probe used to confirm a
-// deployment — threw SESSION_EXPIRED locally for anyone not logged in and
-// never reached the server. That is exactly who runs it, and exactly when.
 const PUBLIC_ACTIONS = new Set([
   'system.health',
   'auth.register',
   'auth.login',
   'auth.checkUsername',
 ]);
+
+/** Griot actions are served by the same-origin Netlify Function. */
+const GRIOT_ACTIONS = new Set(['griot.chat', 'griot.speak']);
+const GRIOT_ENDPOINT = '/.netlify/functions/griot';
 
 /** Fired on the window when the server ends a session. */
 export const SESSION_EXPIRED_EVENT = 'flowtribe:session-expired';
@@ -78,8 +80,6 @@ export async function call(action, payload = {}, options = {}) {
   if (!PUBLIC_ACTIONS.has(action)) {
     const token = getToken();
     if (!token) {
-      // Fail here rather than sending a request that is certain to be
-      // rejected — it is faster and produces a cleaner error.
       throw new AppError(ErrorCode.SESSION_EXPIRED);
     }
     body.token = token;
@@ -90,9 +90,6 @@ export async function call(action, payload = {}, options = {}) {
   } catch (error) {
     const appError = toAppError(error);
 
-    // One retry, transport failures only. Never retry a rejected PIN or a
-    // duplicate link: those fail identically and waste the member's time.
-    // Safe because writes carry a requestId the server treats idempotently.
     if (retry && appError.retryable) {
       return send(body, { timeout, signal });
     }
@@ -101,24 +98,13 @@ export async function call(action, payload = {}, options = {}) {
   }
 }
 
-/**
- * Check whether a deployment URL has been configured.
- *
- * v1 shipped with a `PASTE_YOUR_APPS_SCRIPT_URL_HERE` placeholder and only
- * discovered it at the first submission. This makes the state inspectable.
- *
- * @returns {boolean}
- */
+/** Check whether the core Apps Script deployment URL has been configured. */
 export function isConfigured() {
   const url = config.api.baseUrl;
   return Boolean(url) && !url.includes('PASTE_YOUR') && url.startsWith('https://');
 }
 
-/**
- * Probe the deployment. Used by the gallery page and after a deploy.
- *
- * @returns {Promise<{ ok: boolean, version?: string, error?: string }>}
- */
+/** Probe the core deployment. */
 export async function health() {
   try {
     const data = await call('system.health', {}, { retry: false, timeout: 8000 });
@@ -135,20 +121,20 @@ export async function health() {
 async function send(body, { timeout, signal }) {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeout);
-
-  // Honour a caller's abort signal alongside the timeout.
   const onExternalAbort = () => controller.abort();
   if (signal) signal.addEventListener('abort', onExternalAbort);
 
+  const isGriot = GRIOT_ACTIONS.has(body.action);
+  const target = isGriot ? GRIOT_ENDPOINT : config.api.baseUrl;
+
   let response;
   try {
-    response = await fetch(config.api.baseUrl, {
+    response = await fetch(target, {
       method: 'POST',
-      // See the module header: not a mistake.
-      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      headers: {
+        'Content-Type': isGriot ? 'application/json;charset=utf-8' : 'text/plain;charset=utf-8',
+      },
       body: JSON.stringify(body),
-      // Apps Script issues a 302 to a googleusercontent.com host that serves
-      // the actual payload; without following it there is no response to read.
       redirect: 'follow',
       signal: controller.signal,
     });
@@ -168,8 +154,6 @@ async function send(body, { timeout, signal }) {
   try {
     envelope = JSON.parse(text);
   } catch (error) {
-    // Almost always an Apps Script HTML error page — an undeployed script, a
-    // permissions problem, or an uncaught server exception.
     console.error('[api] non-JSON response', text.slice(0, 500));
     throw new AppError(ErrorCode.MALFORMED_RESPONSE, undefined, { cause: error });
   }
@@ -182,8 +166,6 @@ async function send(body, { timeout, signal }) {
     throw buildError(envelope.error);
   }
 
-  // The server slides the session forward on each authenticated request;
-  // mirror the new expiry locally so the client agrees about when it ends.
   if (envelope.meta?.sessionExpiresAt) {
     touchSession(envelope.meta.sessionExpiresAt);
   }
@@ -199,8 +181,6 @@ function buildError(raw) {
     details: raw?.details,
   });
 
-  // A dead session is handled once, here, rather than at every call site.
-  // The shell listens and routes to login.
   if (error.endsSession) {
     clearSession();
     dispatch(SESSION_EXPIRED_EVENT);
@@ -218,13 +198,6 @@ function dispatch(type, detail) {
   window.dispatchEvent(new CustomEvent(type, { detail }));
 }
 
-/**
- * Generate a request id for idempotency.
- *
- * The server treats a repeat of the same id within a short window as the same
- * request, so a double-tapped submit button on a slow connection records one
- * post rather than two.
- */
 function createRequestId() {
   if (globalThis.crypto?.randomUUID) return globalThis.crypto.randomUUID();
   return `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`;
