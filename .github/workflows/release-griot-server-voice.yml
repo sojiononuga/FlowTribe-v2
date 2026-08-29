@@ -27,7 +27,7 @@ jobs:
           printf '%s' "$HEALTH" | grep -q 'Flow Tribe API'
           echo 'LIVE API HEALTH PASSED'
 
-          SPEAK="$(curl -fsSL -X POST \
+          SPEAK="$(curl -fsSL \
             -H 'Content-Type: text/plain;charset=UTF-8' \
             --data '{"action":"griot.speak","payload":{"text":"Griot"},"requestId":"release-voice-route-check","clientVersion":"2.0.0"}' \
             "$API")"
