@@ -37,9 +37,9 @@ Conversation history is capped, strings are length-limited, model-recommended na
 
 ## Voice layer
 
-Griot speech is generated server-side through the OpenAI speech interface exposed through Netlify AI Gateway so the audible identity is consistent across desktop and mobile. The production target is `gpt-4o-mini-tts` with the `cedar` voice.
+Griot speech is generated server-side through **OpenRouter's dedicated speech API**, reached through Netlify AI Gateway using the same server-only gateway credential as the conversation layer. The current production target is `openai/gpt-4o-mini-tts-2025-12-15` with one fixed `alloy` voice so desktop and mobile hear the same identity.
 
-The speech boundary explicitly renders the written name **Griot** as **“Gree-oh”** and instructs the voice never to pronounce the final T. Device speech synthesis remains fallback-only if server speech is unavailable.
+The speech boundary explicitly renders the written name **Griot** as **“Gree-oh”** and instructs the voice never to pronounce the final T. Device speech synthesis remains fallback-only if server speech is unavailable. The fixed production voice can be changed later as a single product decision after live audition; Flow Tribe does not expose an operating-system voice catalogue.
 
 ## Mobile treatment
 
