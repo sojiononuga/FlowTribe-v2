@@ -1,4 +1,5 @@
 import { el, icon } from '../../core/dom.js';
+import { call } from '../../core/api.js';
 import { navigate } from '../../app/navigation.js';
 import { GriotControl } from './meta-ai.js';
 
@@ -116,8 +117,8 @@ const TOUR_STEPS = [
   {
     route: '/dashboard', selector: '.ft-assist', eyebrow: '17 · VOICE AND GUIDED HELP',
     title: 'Griot speaks with a small set of voices chosen for this experience.',
-    body: 'Instead of a long device-voice catalogue, Flow offers a few context-appropriate voices. The same chosen voice reads Griot replies and the guided tour.',
-    narration: 'Finally, the Voice control gives you a small set of voices selected for Flow rather than a long operating system catalogue. The same chosen voice can read Griot replies and guide this tour. Show me round remains self running, and you can pause, go back, replay or jump ahead whenever you want control.',
+    body: 'Griot has one consistent server voice across desktop and mobile. Device speech is fallback only.',
+    narration: 'Finally, Griot has one consistent voice across desktop and mobile rather than a changing operating system voice. The same voice reads Griot replies and guides this tour. Show me round remains self running, and you can pause, go back, replay or jump ahead whenever you want control.',
   },
 ];
 
@@ -243,34 +244,14 @@ function VoicePanel(settings, status) {
   ]);
 
   function refreshVoices() {
-    if (!supportsSpeech()) {
-      voiceSelect.replaceChildren(el('option', { attrs: { value: '' }, text: 'Voice unavailable in this browser' }));
-      voiceSelect.disabled = true;
-      preview.disabled = true;
-      return;
-    }
-
-    const voices = window.speechSynthesis.getVoices();
-    const curated = curateVoices(voices);
-    if (!curated.length) {
-      voiceSelect.replaceChildren(el('option', { attrs: { value: '' }, text: 'Griot — Device voice' }));
-      settings.voiceURI = '';
-      saveVoiceSettings(settings);
-      return;
-    }
-
-    const options = curated.map(({ voice, label }) => el('option', {
-      attrs: { value: voice.voiceURI },
-      text: label,
+    voiceSelect.replaceChildren(el('option', {
+      attrs: { value: 'griot-server' },
+      text: 'Griot — consistent voice',
     }));
-    voiceSelect.replaceChildren(...options);
-
-    const savedStillAvailable = curated.some(({ voice: item }) => item.voiceURI === settings.voiceURI);
-    if (!savedStillAvailable) {
-      settings.voiceURI = curated[0].voice.voiceURI;
-      saveVoiceSettings(settings);
-    }
-    voiceSelect.value = settings.voiceURI;
+    voiceSelect.value = 'griot-server';
+    voiceSelect.disabled = true;
+    settings.voiceURI = 'griot-server';
+    saveVoiceSettings(settings);
   }
 
   panel.refreshVoices = refreshVoices;
@@ -495,7 +476,7 @@ function ActiveGuidedTour(settings, status) {
   }
 
   function stopSpeaking() {
-    if (speaking && supportsSpeech()) window.speechSynthesis.cancel();
+    stopVoicePlayback();
     speaking = false;
   }
 
@@ -508,24 +489,106 @@ function ActiveGuidedTour(settings, status) {
   return node;
 }
 
+let activeVoiceAudio = null;
+let activeVoiceUrl = '';
+let voiceRequestToken = 0;
+
 function speakText(text, settings, status, callbacks = {}) {
+  const token = ++voiceRequestToken;
+  stopVoicePlayback({ preserveToken: true });
+  status.textContent = 'Griot is preparing voice.';
+
+  call('griot.speak', { text: String(text || ''), rate: settings.rate }, { timeout: 35000, retry: false })
+    .then((result) => {
+      if (token !== voiceRequestToken) return;
+      const encoded = String(result?.audioBase64 || '');
+      if (!encoded) throw new Error('No speech audio returned.');
+      const mimeType = String(result?.mimeType || 'audio/mpeg');
+      const binary = window.atob(encoded);
+      const bytes = new Uint8Array(binary.length);
+      for (let i = 0; i < binary.length; i += 1) bytes[i] = binary.charCodeAt(i);
+      const blob = new Blob([bytes], { type: mimeType });
+      activeVoiceUrl = URL.createObjectURL(blob);
+      const audio = new Audio(activeVoiceUrl);
+      activeVoiceAudio = audio;
+      audio.onplay = () => {
+        if (token !== voiceRequestToken) return;
+        status.textContent = 'Griot is speaking.';
+        callbacks.onStart?.();
+      };
+      audio.onended = () => {
+        if (token !== voiceRequestToken) return;
+        cleanupServerAudio();
+        status.textContent = 'Griot voice ready.';
+        callbacks.onEnd?.();
+      };
+      audio.onerror = () => {
+        if (token !== voiceRequestToken) return;
+        cleanupServerAudio();
+        speakDeviceFallback(text, settings, status, callbacks, token);
+      };
+      return audio.play().catch(() => {
+        if (token === voiceRequestToken) {
+          cleanupServerAudio();
+          speakDeviceFallback(text, settings, status, callbacks, token);
+        }
+      });
+    })
+    .catch(() => {
+      if (token === voiceRequestToken) speakDeviceFallback(text, settings, status, callbacks, token);
+    });
+}
+
+function speakDeviceFallback(text, settings, status, callbacks, token) {
   if (!supportsSpeech()) {
-    status.textContent = 'Voice is not available in this browser.';
+    status.textContent = 'Griot voice is unavailable right now.';
     callbacks.onError?.();
     return;
   }
   window.speechSynthesis.cancel();
-  const utterance = new SpeechSynthesisUtterance(text);
-  const voices = window.speechSynthesis.getVoices();
-  const selected = voices.find((voice) => voice.voiceURI === settings.voiceURI);
-  if (selected) utterance.voice = selected;
+  const spokenText = String(text || '').replace(/\bGriot\b/gi, 'Gree-oh');
+  const utterance = new SpeechSynthesisUtterance(spokenText);
   utterance.rate = settings.rate;
   utterance.pitch = 1;
   utterance.volume = 1;
-  utterance.onstart = () => { status.textContent = 'Griot is speaking.'; callbacks.onStart?.(); };
-  utterance.onend = () => { status.textContent = 'Griot voice ready.'; callbacks.onEnd?.(); };
-  utterance.onerror = () => { status.textContent = 'Griot voice could not start.'; callbacks.onError?.(); };
+  utterance.onstart = () => {
+    if (token !== voiceRequestToken) return;
+    status.textContent = 'Griot is speaking with the device fallback.';
+    callbacks.onStart?.();
+  };
+  utterance.onend = () => {
+    if (token !== voiceRequestToken) return;
+    status.textContent = 'Griot voice ready.';
+    callbacks.onEnd?.();
+  };
+  utterance.onerror = () => {
+    if (token !== voiceRequestToken) return;
+    status.textContent = 'Griot voice could not start.';
+    callbacks.onError?.();
+  };
   window.speechSynthesis.speak(utterance);
+}
+
+function cleanupServerAudio() {
+  if (activeVoiceAudio) {
+    activeVoiceAudio.onplay = null;
+    activeVoiceAudio.onended = null;
+    activeVoiceAudio.onerror = null;
+    activeVoiceAudio = null;
+  }
+  if (activeVoiceUrl) {
+    URL.revokeObjectURL(activeVoiceUrl);
+    activeVoiceUrl = '';
+  }
+}
+
+function stopVoicePlayback({ preserveToken = false } = {}) {
+  if (!preserveToken) voiceRequestToken += 1;
+  if (activeVoiceAudio) {
+    try { activeVoiceAudio.pause(); } catch { /* Already stopped. */ }
+  }
+  cleanupServerAudio();
+  if (supportsSpeech()) window.speechSynthesis.cancel();
 }
 
 function supportsSpeech() {
