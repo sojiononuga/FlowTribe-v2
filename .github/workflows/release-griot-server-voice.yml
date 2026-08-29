@@ -1,0 +1,124 @@
+name: release Griot server voice
+
+on:
+  push:
+    branches: [ops/release-griot-server-voice]
+    paths: [.github/workflows/release-griot-server-voice.yml]
+
+permissions:
+  contents: read
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Check out exact production source
+        uses: actions/checkout@v4
+        with:
+          ref: 98a2de6f0b9f6ab4ffad21ae59f85f21547a25ac
+
+      - name: Verify live Apps Script health and Griot speech route
+        shell: bash
+        run: |
+          set -euo pipefail
+          API='https://script.google.com/macros/s/AKfycbwWWVFp0K9oJKkZsnOackCSCmeAUPxZLRANX9v1YN0Dl-Y3VdTg_4Qp5_s-arhYZuOB/exec'
+          HEALTH="$(curl -fsSL "$API")"
+          printf '%s' "$HEALTH" | grep -q 'Flow Tribe API'
+          echo 'LIVE API HEALTH PASSED'
+
+          SPEAK="$(curl -fsSL -X POST \
+            -H 'Content-Type: text/plain;charset=UTF-8' \
+            --data '{"action":"griot.speak","payload":{"text":"Griot"},"requestId":"release-voice-route-check","clientVersion":"2.0.0"}' \
+            "$API")"
+          echo "$SPEAK"
+          if printf '%s' "$SPEAK" | grep -q 'NOT_FOUND'; then
+            echo 'griot.speak is not present in live backend' >&2
+            exit 31
+          fi
+          if ! printf '%s' "$SPEAK" | grep -Eq 'SESSION_EXPIRED|AUTH|UNAUTHORIZED|NO_SESSION'; then
+            echo 'griot.speak did not demonstrate the expected authentication boundary' >&2
+            exit 32
+          fi
+          echo 'LIVE GRIOT SPEECH ROUTE PASSED (authentication boundary enforced)'
+
+      - name: Prepare production frontend
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -rf deploy
+          mkdir deploy
+          rsync -a ./ deploy/ \
+            --exclude='.git' \
+            --exclude='.github' \
+            --exclude='deploy' \
+            --exclude='tests' \
+            --exclude='docs' \
+            --exclude='dist' \
+            --exclude='scripts' \
+            --exclude='appsscript' \
+            --exclude='.clasp.json*' \
+            --exclude='.claude' \
+            --exclude='.netlify-site-id'
+          cat > deploy/src/core/config.js <<'EOF'
+          export const config = {
+            version: '2.0.0',
+            api: {
+              baseUrl: 'https://script.google.com/macros/s/AKfycbwWWVFp0K9oJKkZsnOackCSCmeAUPxZLRANX9v1YN0Dl-Y3VdTg_4Qp5_s-arhYZuOB/exec',
+              timeoutMs: 20000,
+            },
+            app: {
+              name: 'Flow Tribe',
+              memberEntry: 'index.html',
+              adminEntry: 'admin.html',
+              timezone: 'Africa/Lagos',
+            },
+            rules: {
+              pinLength: 6,
+              usernameMinLength: 3,
+              usernameMaxLength: 20,
+              bioMaxLength: 160,
+            },
+            debug: false,
+          };
+          export default config;
+          EOF
+          rm -f deploy/gallery.html
+
+      - name: Deploy production frontend
+        shell: bash
+        env:
+          NETLIFY_AUTH_TOKEN: ${{ secrets.NETLIFY_AUTH_TOKEN }}
+          NETLIFY_SITE_ID: 10422d5c-3f32-47bb-a258-1a8486e626c0
+        run: |
+          set -euo pipefail
+          test -n "$NETLIFY_AUTH_TOKEN"
+          npx --yes netlify-cli@23.11.0 deploy \
+            --prod \
+            --dir deploy \
+            --site "$NETLIFY_SITE_ID" \
+            --auth "$NETLIFY_AUTH_TOKEN" \
+            --message "Griot cross-device voice release 98a2de6" \
+            --json | tee netlify-deploy.json
+          cat netlify-deploy.json
+
+      - name: Verify live Griot voice frontend and mobile assets
+        shell: bash
+        run: |
+          set -euo pipefail
+          SITE='https://dainty-frangollo-1063b3.netlify.app'
+          for i in {1..12}; do
+            ASSIST="$(curl -fsSL "$SITE/src/features/showcase/member-assist.js" || true)"
+            ROUTER="$(curl -fsSL "$SITE/src/features/showcase/meta-ai.js" || true)"
+            if printf '%s' "$ASSIST" | grep -q "griot.speak"; then break; fi
+            sleep 5
+          done
+          printf '%s' "$ASSIST" | grep -q "griot.speak"
+          printf '%s' "$ASSIST" | grep -q "Gree-oh"
+          printf '%s' "$ASSIST" | grep -q "speechSynthesis"
+          printf '%s' "$ROUTER" | grep -q "griot.chat"
+          if printf '%s' "$ASSIST" | grep -q 'Griot — Warm & grounded'; then
+            echo 'Old device-specific voice palette still present' >&2
+            exit 41
+          fi
+          echo 'LIVE GRIOT SERVER VOICE FRONTEND VERIFICATION PASSED'
