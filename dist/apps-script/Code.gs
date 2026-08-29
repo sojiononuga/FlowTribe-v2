@@ -502,6 +502,7 @@ function getActionTable_() {
 
     // --- Griot conversational intelligence ---
     'griot.chat': { capability: 'dashboard:self', handler: GriotService.chat },
+    'griot.speak': { capability: 'dashboard:self', handler: GriotService.speak },
 
     // --- Milestones and levels ---
     'milestones.list': { capability: 'dashboard:self', handler: MemberController.milestones },
@@ -5245,6 +5246,9 @@ var GriotService = (function () {
   var DEFAULT_MODEL = 'muse-spark-1.2';
   var API_URL = 'https://api.meta.ai/v1/chat/completions';
   var MAX_HISTORY = 10;
+  var OPENAI_SPEECH_URL = 'https://api.openai.com/v1/audio/speech';
+  var DEFAULT_SPEECH_MODEL = 'gpt-4o-mini-tts';
+  var DEFAULT_SPEECH_VOICE = 'cedar';
 
   function chat(ctx) {
     Validate.required(ctx.payload, ['message']);
@@ -5310,6 +5314,60 @@ var GriotService = (function () {
       text: parsed.reply,
       action: normaliseAction_(parsed.action, parsed.label),
       grounded: true,
+    };
+  }
+
+
+  function speak(ctx) {
+    Validate.required(ctx.payload, ['text']);
+    RateLimit.check('griot-voice', ctx.member.memberId, 45, 300);
+
+    var text = Validate.str(ctx.payload.text, 3500);
+    var props = PropertiesService.getScriptProperties();
+    var key = props.getProperty('FT_GRIOT_OPENAI_API_KEY') || props.getProperty('OPENAI_API_KEY') || '';
+    if (!key) {
+      throw fail_('SERVER_ERROR', 'Griot voice is not configured yet.', {
+        internal: 'Missing OpenAI speech credential in Script Properties',
+      });
+    }
+
+    var requestedRate = Number(ctx.payload.rate || 0.92);
+    var pace = requestedRate < 0.9 ? 'slightly unhurried' : requestedRate > 1.02 ? 'slightly brisk' : 'natural and measured';
+    var request = {
+      model: props.getProperty('FT_GRIOT_OPENAI_TTS_MODEL') || DEFAULT_SPEECH_MODEL,
+      voice: props.getProperty('FT_GRIOT_OPENAI_VOICE') || DEFAULT_SPEECH_VOICE,
+      input: speechText_(text),
+      response_format: 'mp3',
+      instructions: 'You are the voice of Griot, pronounced GREE-oh. Speak with warm, grounded confidence, clear diction and a ' + pace + ' conversational pace. Never pronounce the final T in Griot.',
+    };
+
+    var response;
+    try {
+      response = UrlFetchApp.fetch(OPENAI_SPEECH_URL, {
+        method: 'post',
+        contentType: 'application/json',
+        headers: { Authorization: 'Bearer ' + key },
+        payload: JSON.stringify(request),
+        muteHttpExceptions: true,
+      });
+    } catch (error) {
+      Logger_.warn('griot-voice', 'OpenAI speech request failed', { internal: String(error) });
+      throw fail_('SERVER_ERROR', 'Griot voice could not start just now.');
+    }
+
+    var status = response.getResponseCode();
+    if (status < 200 || status >= 300) {
+      Logger_.warn('griot-voice', 'OpenAI speech returned HTTP ' + status, {
+        internal: (response.getContentText() || '').slice(0, 800),
+      });
+      throw fail_('SERVER_ERROR', 'Griot voice could not start just now.');
+    }
+
+    return {
+      audioBase64: Utilities.base64Encode(response.getBlob().getBytes()),
+      mimeType: 'audio/mpeg',
+      voice: request.voice,
+      model: request.model,
     };
   }
 
@@ -5453,7 +5511,13 @@ var GriotService = (function () {
     return labels[action] || 'Open';
   }
 
-  return { chat: chat };
+
+  function speechText_(text) {
+    return String(text || '')
+      .replace(/\bGriot\b/gi, 'Gree-oh');
+  }
+
+  return { chat: chat, speak: speak };
 })();
 
 /* ===== END appsscript/services/GriotService.gs ===== */
