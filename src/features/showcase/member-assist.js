@@ -195,6 +195,12 @@ export function MemberAssistControls() {
 
   document.addEventListener('flowtribe:tour-open', () => tour.open());
 
+  // Unlock Web Audio from a real member gesture so asynchronous server speech
+  // can play later on iOS/Safari as well as desktop browsers.
+  node.addEventListener('pointerdown', primeVoicePlayback, { once: true, capture: true });
+  node.addEventListener('touchstart', primeVoicePlayback, { once: true, capture: true, passive: true });
+  node.addEventListener('keydown', primeVoicePlayback, { once: true, capture: true });
+
   return node;
 }
 
@@ -491,11 +497,24 @@ function ActiveGuidedTour(settings, status) {
 
 let activeVoiceAudio = null;
 let activeVoiceUrl = '';
+let activeVoiceSource = null;
+let voiceAudioContext = null;
 let voiceRequestToken = 0;
+
+function primeVoicePlayback() {
+  const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+  if (!AudioContextClass) return null;
+  try {
+    if (!voiceAudioContext) voiceAudioContext = new AudioContextClass();
+    if (voiceAudioContext.state === 'suspended') voiceAudioContext.resume().catch(() => {});
+    return voiceAudioContext;
+  } catch { return null; }
+}
 
 function speakText(text, settings, status, callbacks = {}) {
   const token = ++voiceRequestToken;
   stopVoicePlayback({ preserveToken: true });
+  primeVoicePlayback();
   status.textContent = 'Griot is preparing voice.';
 
   call('griot.speak', { text: String(text || ''), rate: settings.rate }, { timeout: 35000, retry: false })
@@ -503,40 +522,70 @@ function speakText(text, settings, status, callbacks = {}) {
       if (token !== voiceRequestToken) return;
       const encoded = String(result?.audioBase64 || '');
       if (!encoded) throw new Error('No speech audio returned.');
-      const mimeType = String(result?.mimeType || 'audio/mpeg');
-      const binary = window.atob(encoded);
-      const bytes = new Uint8Array(binary.length);
-      for (let i = 0; i < binary.length; i += 1) bytes[i] = binary.charCodeAt(i);
-      const blob = new Blob([bytes], { type: mimeType });
-      activeVoiceUrl = URL.createObjectURL(blob);
-      const audio = new Audio(activeVoiceUrl);
-      activeVoiceAudio = audio;
-      audio.onplay = () => {
-        if (token !== voiceRequestToken) return;
-        status.textContent = 'Griot is speaking.';
-        callbacks.onStart?.();
-      };
-      audio.onended = () => {
-        if (token !== voiceRequestToken) return;
-        cleanupServerAudio();
-        status.textContent = 'Griot voice ready.';
-        callbacks.onEnd?.();
-      };
-      audio.onerror = () => {
-        if (token !== voiceRequestToken) return;
-        cleanupServerAudio();
-        speakDeviceFallback(text, settings, status, callbacks, token);
-      };
-      return audio.play().catch(() => {
-        if (token === voiceRequestToken) {
-          cleanupServerAudio();
-          speakDeviceFallback(text, settings, status, callbacks, token);
-        }
-      });
+      return playServerVoice(encoded, String(result?.mimeType || 'audio/mpeg'), token, status, callbacks);
     })
     .catch(() => {
       if (token === voiceRequestToken) speakDeviceFallback(text, settings, status, callbacks, token);
     });
+}
+
+async function playServerVoice(encoded, mimeType, token, status, callbacks) {
+  const binary = window.atob(encoded);
+  const bytes = new Uint8Array(binary.length);
+  for (let i = 0; i < binary.length; i += 1) bytes[i] = binary.charCodeAt(i);
+
+  const context = primeVoicePlayback();
+  if (context) {
+    try {
+      if (context.state === 'suspended') await context.resume();
+      if (token !== voiceRequestToken || context.state !== 'running') throw new Error('Audio context unavailable');
+      const buffer = await context.decodeAudioData(bytes.buffer.slice(0));
+      if (token !== voiceRequestToken) return;
+      const source = context.createBufferSource();
+      activeVoiceSource = source;
+      source.buffer = buffer;
+      source.connect(context.destination);
+      source.onended = () => {
+        if (token !== voiceRequestToken) return;
+        if (activeVoiceSource === source) activeVoiceSource = null;
+        status.textContent = 'Griot voice ready.';
+        callbacks.onEnd?.();
+      };
+      source.start(0);
+      status.textContent = 'Griot is speaking.';
+      callbacks.onStart?.();
+      return;
+    } catch { /* Fall through to HTMLAudio. */ }
+  }
+
+  return playHtmlServerAudio(bytes, mimeType, token, status, callbacks);
+}
+
+function playHtmlServerAudio(bytes, mimeType, token, status, callbacks) {
+  cleanupHtmlAudio();
+  activeVoiceUrl = URL.createObjectURL(new Blob([bytes], { type: mimeType }));
+  const audio = new Audio();
+  activeVoiceAudio = audio;
+  audio.preload = 'auto';
+  audio.setAttribute('playsinline', '');
+  audio.src = activeVoiceUrl;
+  audio.onplay = () => {
+    if (token !== voiceRequestToken) return;
+    status.textContent = 'Griot is speaking.';
+    callbacks.onStart?.();
+  };
+  audio.onended = () => {
+    if (token !== voiceRequestToken) return;
+    cleanupHtmlAudio();
+    status.textContent = 'Griot voice ready.';
+    callbacks.onEnd?.();
+  };
+  audio.onerror = () => {
+    if (token !== voiceRequestToken) return;
+    cleanupHtmlAudio();
+    callbacks.onError?.();
+  };
+  return audio.play();
 }
 
 function speakDeviceFallback(text, settings, status, callbacks, token) {
@@ -546,8 +595,7 @@ function speakDeviceFallback(text, settings, status, callbacks, token) {
     return;
   }
   window.speechSynthesis.cancel();
-  const spokenText = String(text || '').replace(/\bGriot\b/gi, 'Gree-oh');
-  const utterance = new SpeechSynthesisUtterance(spokenText);
+  const utterance = new SpeechSynthesisUtterance(String(text || '').replace(/\bGriot\b/gi, 'Gree-oh'));
   utterance.rate = settings.rate;
   utterance.pitch = 1;
   utterance.volume = 1;
@@ -569,11 +617,12 @@ function speakDeviceFallback(text, settings, status, callbacks, token) {
   window.speechSynthesis.speak(utterance);
 }
 
-function cleanupServerAudio() {
+function cleanupHtmlAudio() {
   if (activeVoiceAudio) {
     activeVoiceAudio.onplay = null;
     activeVoiceAudio.onended = null;
     activeVoiceAudio.onerror = null;
+    try { activeVoiceAudio.pause(); } catch { /* Already stopped. */ }
     activeVoiceAudio = null;
   }
   if (activeVoiceUrl) {
@@ -584,10 +633,13 @@ function cleanupServerAudio() {
 
 function stopVoicePlayback({ preserveToken = false } = {}) {
   if (!preserveToken) voiceRequestToken += 1;
-  if (activeVoiceAudio) {
-    try { activeVoiceAudio.pause(); } catch { /* Already stopped. */ }
+  if (activeVoiceSource) {
+    activeVoiceSource.onended = null;
+    try { activeVoiceSource.stop(); } catch { /* Already stopped. */ }
+    try { activeVoiceSource.disconnect(); } catch { /* Already disconnected. */ }
+    activeVoiceSource = null;
   }
-  cleanupServerAudio();
+  cleanupHtmlAudio();
   if (supportsSpeech()) window.speechSynthesis.cancel();
 }
 

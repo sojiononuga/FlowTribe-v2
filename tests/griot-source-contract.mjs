@@ -55,6 +55,11 @@ assert(client.includes("call('griot.chat'"), 'Griot client must call the convers
 assert(!client.includes('function answerQuestion('), 'The old keyword answer engine must not return.');
 assert(client.includes('SpeechRecognition') && client.includes('webkitSpeechRecognition'), 'Griot must support browser speech input where available.');
 assert(assist.includes("call('griot.speak'"), 'Voice playback must use the authenticated server speech action first.');
+assert(assist.includes('function primeVoicePlayback()'), 'Griot must unlock mobile audio from a member gesture.');
+assert(assist.includes('AudioContext') && assist.includes('webkitAudioContext'), 'Griot must support Web Audio on desktop and iOS Safari.');
+assert(assist.includes('decodeAudioData') && assist.includes('createBufferSource'), 'Server voice must use Web Audio where available.');
+assert(assist.includes("audio.setAttribute('playsinline', '')"), 'Mobile server audio must play inline.');
+assert(assist.includes('speakText(step.narration'), 'Show me round must share the Griot server voice path.');
 assert(assist.includes("text: 'Griot — consistent voice'"), 'The UI must expose one consistent Griot voice rather than device-specific aliases.');
 assert(assist.includes("replace(/\\bGriot\\b/gi, 'Gree-oh')"), 'Device fallback must also pronounce Griot as Gree-oh.');
 assert(!assist.includes('for (const voice of voices)'), 'Do not expose the raw operating-system voice catalogue.');
