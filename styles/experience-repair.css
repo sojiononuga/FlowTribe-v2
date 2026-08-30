@@ -1,0 +1,80 @@
+/* Final guided-help and voice repair. Loaded last. */
+.ft-live-tour {
+  position: fixed !important;
+  inset: 0 !important;
+  z-index: 10000 !important;
+  pointer-events: none !important;
+}
+
+.ft-live-tour[hidden] { display: none !important; }
+
+.ft-live-tour__panel,
+.ft-live-tour__panel[data-placement='top'],
+.ft-live-tour__panel[data-placement='bottom'] {
+  position: fixed !important;
+  top: auto !important;
+  right: 1.25rem !important;
+  bottom: 1.25rem !important;
+  left: auto !important;
+  width: min(30rem, calc(100vw - 2.5rem)) !important;
+  max-width: none !important;
+  height: auto !important;
+  max-height: min(62dvh, 32rem) !important;
+  padding: 1.2rem !important;
+  overflow-y: auto !important;
+  transform: none !important;
+  z-index: 10002 !important;
+  pointer-events: auto !important;
+  background: #f6f4ef !important;
+  border-radius: 1.35rem !important;
+  box-shadow: 0 1.5rem 4rem rgba(9, 46, 35, .24) !important;
+}
+
+.ft-live-tour-target {
+  position: relative;
+  z-index: 1000 !important;
+}
+
+.ft-live-tour__top,
+.ft-live-tour__meta,
+.ft-live-tour__footer {
+  position: relative;
+  z-index: 1;
+}
+
+.ft-live-tour__title {
+  margin-top: .55rem !important;
+  line-height: 1.12 !important;
+}
+
+.ft-live-tour__body {
+  margin-top: .7rem !important;
+  line-height: 1.5 !important;
+}
+
+@media (max-width: 720px) {
+  .ft-live-tour__panel,
+  .ft-live-tour__panel[data-placement='top'],
+  .ft-live-tour__panel[data-placement='bottom'] {
+    right: .65rem !important;
+    bottom: calc(var(--ft-bottom-nav-height) + .65rem + env(safe-area-inset-bottom)) !important;
+    left: .65rem !important;
+    width: auto !important;
+    max-height: 46dvh !important;
+    padding: .95rem !important;
+  }
+
+  .ft-live-tour__footer {
+    display: grid !important;
+    grid-template-columns: 1fr 1fr !important;
+    gap: .55rem !important;
+  }
+
+  .ft-live-tour__button {
+    width: 100%;
+    min-width: 0;
+  }
+
+  .ft-live-tour__title { font-size: 1.16rem !important; }
+  .ft-live-tour__body { font-size: .92rem !important; }
+}
