@@ -5,7 +5,7 @@
  * through `call(action, payload)`.
  *
  * Most actions go to Apps Script. Griot chat and speech are deliberately
- * routed through the same-origin Netlify Function so their AI runtime can be
+ * routed through same-origin Netlify Functions so their AI runtime can be
  * deployed independently while still validating the member's Flow session
  * against Apps Script.
  *
@@ -41,9 +41,8 @@ const PUBLIC_ACTIONS = new Set([
   'auth.checkUsername',
 ]);
 
-/** Griot actions are served by the same-origin Netlify Function. */
-const GRIOT_ACTIONS = new Set(['griot.chat', 'griot.speak']);
-const GRIOT_ENDPOINT = '/.netlify/functions/griot';
+const GRIOT_CHAT_ENDPOINT = '/.netlify/functions/griot-chat';
+const GRIOT_SPEECH_ENDPOINT = '/.netlify/functions/griot';
 
 /** Fired on the window when the server ends a session. */
 export const SESSION_EXPIRED_EVENT = 'flowtribe:session-expired';
@@ -124,8 +123,12 @@ async function send(body, { timeout, signal }) {
   const onExternalAbort = () => controller.abort();
   if (signal) signal.addEventListener('abort', onExternalAbort);
 
-  const isGriot = GRIOT_ACTIONS.has(body.action);
-  const target = isGriot ? GRIOT_ENDPOINT : config.api.baseUrl;
+  const isGriot = body.action === 'griot.chat' || body.action === 'griot.speak';
+  const target = body.action === 'griot.chat'
+    ? GRIOT_CHAT_ENDPOINT
+    : body.action === 'griot.speak'
+      ? GRIOT_SPEECH_ENDPOINT
+      : config.api.baseUrl;
 
   let response;
   try {
