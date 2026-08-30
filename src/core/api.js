@@ -88,8 +88,8 @@ export async function health() {
 }
 
 async function send(body, { timeout, signal }) {
-  const isGriot = body.action === 'griot.chat' || body.action === 'griot.speak';
-  const target = body.action === 'griot.chat'
+  const isGriot = body.action === 'griot.chat' || body.action === 'griot.warm' || body.action === 'griot.speak';
+  const target = body.action === 'griot.chat' || body.action === 'griot.warm'
     ? GRIOT_CHAT_ENDPOINT
     : body.action === 'griot.speak'
       ? GRIOT_SPEECH_ENDPOINT
