@@ -16,9 +16,10 @@ jobs:
       - uses: actions/checkout@v4
         with:
           ref: fix/griot-voice-quality-latency
+
       - name: Patch cross-device audio playback
-        shell: python
         run: |
+          python - <<'PY'
           from pathlib import Path
           p = Path('src/features/showcase/member-assist.js')
           s = p.read_text()
@@ -27,8 +28,7 @@ jobs:
           listener_replacement = """  document.addEventListener('flowtribe:tour-open', () => tour.open());
 
   // iOS/Safari requires the audio pipeline to be unlocked by a real member
-  // gesture before later asynchronous TTS responses can play. Prime Web Audio
-  // as soon as the member first interacts with the help controls.
+  // gesture before later asynchronous TTS responses can play.
   node.addEventListener('pointerdown', primeVoicePlayback, { once: true, capture: true });
   node.addEventListener('touchstart', primeVoicePlayback, { once: true, capture: true, passive: true });
   node.addEventListener('keydown', primeVoicePlayback, { once: true, capture: true });
@@ -51,9 +51,7 @@ function primeVoicePlayback() {
   if (!AudioContextClass) return null;
   try {
     if (!voiceAudioContext) voiceAudioContext = new AudioContextClass();
-    if (voiceAudioContext.state === 'suspended') {
-      voiceAudioContext.resume().catch(() => {});
-    }
+    if (voiceAudioContext.state === 'suspended') voiceAudioContext.resume().catch(() => {});
     return voiceAudioContext;
   } catch {
     return null;
@@ -106,8 +104,7 @@ async function playServerVoice(encoded, mimeType, token, status, callbacks) {
       callbacks.onStart?.();
       return;
     } catch {
-      // Fall through to HTMLAudio. This is still server-generated Griot voice;
-      // device speech is used only if both server playback paths fail.
+      // Fall through to HTMLAudio. Device speech remains final fallback only.
     }
   }
 
@@ -201,6 +198,8 @@ function stopVoicePlayback({ preserveToken = false } = {}) {
 '''
           s = s[:start] + replacement + s[end:]
           p.write_text(s)
+          PY
+
       - name: Verify syntax and regression
         run: |
           cp src/core/config.example.js src/core/config.js
@@ -208,6 +207,7 @@ function stopVoicePlayback({ preserveToken = false } = {}) {
           npm install --no-audit --no-fund --package-lock=false
           npx playwright install --with-deps chromium
           npm run verify
+
       - name: Commit patch
         run: |
           git config user.name github-actions[bot]
