@@ -49,6 +49,7 @@ function getActionTable_() {
 
     // --- Griot conversational intelligence ---
     'griot.chat': { capability: 'dashboard:self', handler: GriotService.chat },
+    'griot.warm': { capability: 'dashboard:self', handler: GriotService.chat },
     'griot.speak': { capability: 'dashboard:self', handler: GriotService.speak },
 
     // --- Milestones and levels ---
@@ -96,117 +97,5 @@ function getActionTable_() {
     'admin.settings.get': { capability: 'settings:read', handler: AdminController.getSettings },
     'admin.settings.update': { capability: 'settings:update', handler: AdminController.updateSetting },
     'admin.audit.list': { capability: 'audit:read', handler: AdminController.listAudit },
-  };
-}
-
-/**
- * POST entry point — every real request arrives here.
- *
- * The body is sent as text/plain carrying JSON. That looks wrong and is
- * deliberate: application/json makes the request non-simple, which triggers a
- * CORS preflight, and Apps Script does not answer OPTIONS. text/plain keeps it
- * a simple request so the browser can read the response.
- *
- * @param {Object} e
- * @returns {GoogleAppsScript.Content.TextOutput}
- */
-function doPost(e) {
-  var started = Date.now();
-  var action = 'unknown';
-
-  try {
-    var request = parseRequest_(e);
-    action = request.action;
-
-    var result = dispatch_(request);
-
-    Logger_.info('request', action + ' ok in ' + (Date.now() - started) + 'ms');
-    return successResponse_(result.data, result.meta);
-  } catch (error) {
-    if (isAppError_(error)) {
-      // Expected: a typed failure with copy already fit to display.
-      Logger_.warn('request', action + ' -> ' + error.code, { internal: error.internal });
-      return errorResponse_(error.code, error.message, { field: error.field });
-    }
-
-    // Unexpected: loud in the log, generic to the member. Nothing about
-    // internal structure is inferable by probing.
-    logError_('doPost:' + action, error);
-    return errorResponse_('SERVER_ERROR', ERROR_MESSAGES.SERVER_ERROR);
-  }
-}
-
-/**
- * GET entry point — health only, no member data.
- *
- * v1 answered stats over GET with the PIN in the query string. This exists so
- * a deployment can be verified from a browser address bar and nothing more.
- */
-function doGet() {
-  return successResponse_({
-    service: 'Flow Tribe API',
-    version: API_VERSION,
-    status: 'ok',
-  });
-}
-
-/**
- * Route a parsed request through the middleware chain to its handler.
- *
- * @param {Object} request
- * @returns {{data: Object, meta: Object}}
- */
-function dispatch_(request) {
-  var entry = getActionTable_()[request.action];
-  if (!entry) throw fail_('NOT_FOUND');
-
-  var context = {
-    action: request.action,
-    payload: request.payload || {},
-    requestId: request.requestId || '',
-    clientVersion: request.clientVersion || '',
-    userAgent: request.userAgent || '',
-    member: null,
-    session: null,
-    role: null,
-    capabilities: [],
-  };
-
-  // Public actions carry no session.
-  if (entry.capability === null) {
-    return { data: entry.handler(context), meta: {} };
-  }
-
-  var authenticated = Authenticate.resolve(request.token);
-
-  context.member = authenticated.member;
-  context.session = authenticated.session;
-  context.role = authenticated.role;
-  context.capabilities = authenticated.capabilities;
-  context.memberId = authenticated.member.memberId;
-
-  PinGate.check(context, request.action);
-  Authorize.check(context, entry.capability);
-
-  return {
-    data: entry.handler(context),
-    meta: { sessionExpiresAt: authenticated.sessionExpiresAt },
-  };
-}
-
-/**
- * Health handler.
- *
- * Lets a client verify a deployment before any feature depends on it. v1
- * shipped with a placeholder URL and only discovered it at the first
- * submission, by which point a member was already staring at a failure.
- */
-function handleHealth_(context) {
-  return {
-    service: 'Flow Tribe API',
-    version: API_VERSION,
-    timezone: TIMEZONE,
-    receivedRequestId: context.requestId,
-    serverTime: new Date().toISOString(),
   };
 }
