@@ -7,7 +7,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: write
+  contents: read
 
 jobs:
   deploy:
@@ -17,24 +17,17 @@ jobs:
         with:
           ref: main
 
-      - name: Prepare production frontend
+      - name: Prepare production bundle
         shell: bash
         run: |
           set -euo pipefail
           rm -rf deploy
           mkdir deploy
           rsync -a ./ deploy/ \
-            --exclude='.git' \
-            --exclude='.github' \
-            --exclude='deploy' \
-            --exclude='tests' \
-            --exclude='docs' \
-            --exclude='dist' \
-            --exclude='scripts' \
-            --exclude='appsscript' \
-            --exclude='.clasp.json*' \
-            --exclude='.claude' \
-            --exclude='.netlify-site-id'
+            --exclude='.git' --exclude='.github' --exclude='deploy' \
+            --exclude='tests' --exclude='docs' --exclude='dist' \
+            --exclude='scripts' --exclude='appsscript' --exclude='.clasp.json*' \
+            --exclude='.claude' --exclude='.netlify-site-id'
           cat > deploy/src/core/config.js <<'EOF'
           export const config = {
             version: '2.0.0',
@@ -42,81 +35,56 @@ jobs:
               baseUrl: 'https://script.google.com/macros/s/AKfycbwWWVFp0K9oJKkZsnOackCSCmeAUPxZLRANX9v1YN0Dl-Y3VdTg_4Qp5_s-arhYZuOB/exec',
               timeoutMs: 20000,
             },
-            app: {
-              name: 'Flow Tribe',
-              memberEntry: 'index.html',
-              adminEntry: 'admin.html',
-              timezone: 'Africa/Lagos',
-            },
-            rules: {
-              pinLength: 6,
-              usernameMinLength: 3,
-              usernameMaxLength: 20,
-              bioMaxLength: 160,
-            },
+            app: { name: 'Flow Tribe', memberEntry: 'index.html', adminEntry: 'admin.html', timezone: 'Africa/Lagos' },
+            rules: { pinLength: 6, usernameMinLength: 3, usernameMaxLength: 20, bioMaxLength: 160 },
             debug: false,
           };
           export default config;
           EOF
           rm -f deploy/gallery.html
 
-      - name: Check Netlify authentication
+      - name: Deploy production
         shell: bash
         env:
           NETLIFY_AUTH_TOKEN: ${{ secrets.NETLIFY_AUTH_TOKEN }}
         run: |
           set -euo pipefail
-          test -n "$NETLIFY_AUTH_TOKEN" || { echo 'NETLIFY_AUTH_TOKEN is not configured'; exit 20; }
-
-      - name: Resolve or create Netlify site
-        id: site
-        shell: bash
-        env:
-          NETLIFY_AUTH_TOKEN: ${{ secrets.NETLIFY_AUTH_TOKEN }}
-        run: |
-          set -euo pipefail
-          if [ -s .netlify-site-id ]; then
-            SITE_ID="$(tr -d '\r\n ' < .netlify-site-id)"
-            SITE_JSON="$(curl -fsS -H "Authorization: Bearer $NETLIFY_AUTH_TOKEN" "https://api.netlify.com/api/v1/sites/$SITE_ID")"
-          else
-            SITE_JSON="$(curl -fsS -X POST \
-              -H "Authorization: Bearer $NETLIFY_AUTH_TOKEN" \
-              -H 'Content-Type: application/json' \
-              -d '{}' \
-              'https://api.netlify.com/api/v1/sites')"
-            SITE_ID="$(printf '%s' "$SITE_JSON" | jq -r '.id')"
-            test -n "$SITE_ID" && test "$SITE_ID" != null
-            printf '%s\n' "$SITE_ID" > .netlify-site-id
-            git config user.name github-actions[bot]
-            git config user.email 41898282+github-actions[bot]@users.noreply.github.com
-            git add .netlify-site-id
-            git commit -m 'ops: record Flow Tribe Netlify site id'
-            git push origin HEAD:main
-          fi
-          SITE_URL="$(printf '%s' "$SITE_JSON" | jq -r '.ssl_url // .url')"
-          echo "site_id=$SITE_ID" >> "$GITHUB_OUTPUT"
-          echo "site_url=$SITE_URL" >> "$GITHUB_OUTPUT"
-          echo "Netlify site: $SITE_URL"
-
-      - name: Deploy to Netlify production
-        shell: bash
-        env:
-          NETLIFY_AUTH_TOKEN: ${{ secrets.NETLIFY_AUTH_TOKEN }}
-          NETLIFY_SITE_ID: ${{ steps.site.outputs.site_id }}
-        run: |
-          set -euo pipefail
+          test -n "$NETLIFY_AUTH_TOKEN"
           npx --yes netlify-cli@23.11.0 deploy \
             --prod \
             --dir deploy \
-            --site "$NETLIFY_SITE_ID" \
+            --functions deploy/netlify/functions \
+            --site '10422d5c-3f32-47bb-a258-1a8486e626c0' \
             --auth "$NETLIFY_AUTH_TOKEN" \
-            --message "Flow Tribe v2 production $GITHUB_SHA" \
+            --message "Griot tour voice repair 4f2fdceced940214db156cf385a2e2baedc3e1e0" \
             --json | tee netlify-deploy.json
+
+      - name: Verify live Griot experience repair
+        shell: bash
+        run: |
+          set -euo pipefail
+          SITE='https://dainty-frangollo-1063b3.netlify.app'
+          INDEX="$(curl -fsSL "$SITE/")"
+          ASSIST="$(curl -fsSL "$SITE/src/features/showcase/member-assist.js")"
+          REPAIR="$(curl -fsSL "$SITE/styles/experience-repair.css")"
+          CHAT="$(curl -fsSL "$SITE/netlify/functions/griot-chat.mjs" 2>/dev/null || true)"
+
+          printf '%s' "$INDEX" | grep -Fq 'styles/experience-repair.css'
+          printf '%s' "$ASSIST" | grep -Fq 'document.body.append(tour)'
+          printf '%s' "$ASSIST" | grep -Fq '/.netlify/functions/griot-voice'
+          printf '%s' "$REPAIR" | grep -Fq 'z-index: 10002'
+          printf '%s' "$REPAIR" | grep -Fq 'max-height: 46dvh'
+
+          VOICE="$(curl -sSL -H 'Content-Type: application/json' --data '{"text":"Griot"}' "$SITE/.netlify/functions/griot-voice")"
+          FAST="$(curl -sSL -H 'Content-Type: application/json' --data '{"action":"griot.chat","payload":{"message":"hello"}}' "$SITE/.netlify/functions/griot-chat")"
+          SPEECH_FALLBACK="$(curl -sSL -H 'Content-Type: application/json' --data '{"action":"griot.speak","payload":{"text":"Griot"}}' "$SITE/.netlify/functions/griot")"
+
+          printf '%s' "$VOICE" | grep -q 'SESSION_EXPIRED'
+          printf '%s' "$FAST" | grep -q 'SESSION_EXPIRED'
+          printf '%s' "$SPEECH_FALLBACK" | grep -q 'SESSION_EXPIRED'
+          if printf '%s' "$VOICE$FAST$SPEECH_FALLBACK" | grep -q 'NOT_FOUND'; then exit 31; fi
+          echo 'LIVE GRIOT TOUR VOICE REPAIR PASSED'
 
       - name: Show deployment result
         shell: bash
-        run: |
-          cat netlify-deploy.json
-          echo "Production site: ${{ steps.site.outputs.site_url }}"
-
-# forest and cream palette release trigger: 2026-08-27
+        run: cat netlify-deploy.json
