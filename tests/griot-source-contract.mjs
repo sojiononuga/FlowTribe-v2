@@ -46,7 +46,6 @@ assert(voiceRuntime.includes("'Content-Type': response.headers.get('content-type
 assert(gateway.includes("replace(/\\bGriot\\b/gi, 'Gree-oh')"), 'Server speech must enforce Griot → Gree-oh pronunciation.');
 
 assert(client.includes("call('griot.chat'"), 'Griot client must call the conversational action.');
-assert(client.includes("call('griot.warm'"), 'Griot must prewarm authenticated context when opened.');
 assert(client.includes('SpeechRecognition') && client.includes('webkitSpeechRecognition'), 'Griot must support browser speech input where available.');
 assert(assist.includes("/.netlify/functions/griot-voice"), 'Primary voice playback must use the binary voice endpoint.');
 assert(assist.includes("call('griot.speak'"), 'Voice playback must retain authenticated server fallback.');

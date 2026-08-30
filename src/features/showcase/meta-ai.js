@@ -168,8 +168,7 @@ export function GriotControl({ status } = {}) {
     button.setAttribute('aria-expanded', 'true');
     nudge.hidden = true;
     syncVisualViewport();
-    const warm = call('griot.warm', { route: currentRoute() }, { timeout: 9000, retry: false }).catch(() => null);
-    await Promise.all([refreshContext(), warm]);
+    await refreshContext();
     if (!messages.childElementCount) {
       addGriot(fromNudge
         ? proactiveOpening(state)

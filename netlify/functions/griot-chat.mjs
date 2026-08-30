@@ -35,8 +35,7 @@ export default async function handler(request) {
     return envelope(false, null, { code: 'VALIDATION', message: 'That request was not valid.' }, 400);
   }
 
-  const action = String(body?.action || '');
-  if (action !== 'griot.chat' && action !== 'griot.warm') {
+  if (String(body?.action || '') !== 'griot.chat') {
     return envelope(false, null, { code: 'NOT_FOUND', message: "We couldn't find that." }, 404);
   }
 
@@ -45,21 +44,6 @@ export default async function handler(request) {
   const message = clean(payload.message, MAX_MESSAGE);
 
   if (!token) return envelope(false, null, { code: 'SESSION_EXPIRED', message: 'Your session has ended. Sign in again.' }, 401);
-
-  if (action === 'griot.warm') {
-    const tokenKey = hashToken(token);
-    const route = clean(payload.route || '/dashboard', 80) || '/dashboard';
-    const cached = readCache(flowCache, tokenKey);
-    if (cached) return envelope(true, { warmed: true }, null, 200, cached.meta || {});
-    const dashboardEnvelope = await flowCall('member.dashboard', token, {}, body);
-    if (!dashboardEnvelope.ok) return passthrough(dashboardEnvelope);
-    const context = minimiseDashboard(dashboardEnvelope.data || {}, route);
-    const meta = dashboardEnvelope.meta || {};
-    writeCache(flowCache, tokenKey, { context, meta });
-    writeCache(sessionCache, tokenKey, { meta });
-    return envelope(true, { warmed: true }, null, 200, meta);
-  }
-
   if (!message) return envelope(false, null, { code: 'VALIDATION', message: 'Tell Griot what you want to work through.' }, 400);
 
   const tokenKey = hashToken(token);
