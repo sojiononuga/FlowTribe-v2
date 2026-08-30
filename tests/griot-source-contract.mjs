@@ -22,7 +22,8 @@ assert(router.includes("'griot.speak': { capability: 'dashboard:self'"), 'Apps S
 assert(manifest.oauthScopes.includes('https://www.googleapis.com/auth/script.external_request'), 'Apps Script fallback must retain external-request scope.');
 
 assert(api.includes("GRIOT_CHAT_ENDPOINT = '/.netlify/functions/griot-chat'"), 'Griot chat must use the dedicated low-latency Netlify Function.');
-assert(api.includes("GRIOT_SPEECH_ENDPOINT = '/.netlify/functions/griot'"), 'Griot speech must keep the governed server voice runtime.');
+assert(api.includes("GRIOT_FALLBACK_ENDPOINT = '/.netlify/functions/griot'"), 'Griot chat must retain the established runtime as a rollout fallback.');
+assert(api.includes('response.status === 404'), 'Griot must fall back safely when the fast runtime is unavailable.');
 assert(fastChat.includes("CHAT_MODEL = 'meta-llama/llama-4-scout'"), 'Griot chat must use the lower-latency Meta Llama Scout route.');
 assert(fastChat.includes("sort: 'latency'"), 'OpenRouter chat routing must prefer low-latency providers.');
 assert(fastChat.includes('max_tokens: 280'), 'Griot generation budget must stay bounded for responsiveness.');
