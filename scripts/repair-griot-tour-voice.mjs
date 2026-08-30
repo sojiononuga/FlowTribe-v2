@@ -107,6 +107,7 @@ mustReplace(
   "      text: 'Griot — consistent voice',",
   "      text: 'Griot — warm voice',",
 );
+
 mustReplace(
   'src/features/showcase/member-assist.js',
   "      el('span', { text: 'A small set chosen for warmth, clarity and calm.' }),",
@@ -127,6 +128,7 @@ mustReplace(
 
 mustReplace('netlify/functions/griot-chat.mjs', "const CHAT_TIMEOUT_MS = 12000;", "const CHAT_TIMEOUT_MS = 9000;");
 mustReplace('netlify/functions/griot-chat.mjs', "const MAX_HISTORY = 8;", "const MAX_HISTORY = 4;");
+
 mustReplace(
   'netlify/functions/griot-chat.mjs',
   "  if (String(body?.action || '') !== 'griot.chat') {\n    return envelope(false, null, { code: 'NOT_FOUND', message: \"We couldn't find that.\" }, 404);\n  }\n\n  const token = String(body?.token || '');\n  const payload = body?.payload && typeof body.payload === 'object' ? body.payload : {};\n  const message = clean(payload.message, MAX_MESSAGE);\n\n  if (!token) return envelope(false, null, { code: 'SESSION_EXPIRED', message: 'Your session has ended. Sign in again.' }, 401);\n  if (!message) return envelope(false, null, { code: 'VALIDATION', message: 'Tell Griot what you want to work through.' }, 400);",
@@ -145,146 +147,7 @@ mustReplace(
   "    'Return only the natural-language answer. Do not emit JSON, metadata or an action object.',\n    'Normally answer in 90 words or fewer unless detail is requested.',",
 );
 
-fs.writeFileSync('netlify/functions/griot-voice.mjs', `const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwWWVFp0K9oJKkZsnOackCSCmeAUPxZLRANX9v1YN0Dl-Y3VdTg_4Qp5_s-arhYZuOB/exec';
-const MODEL = 'gpt-4o-mini-tts';
-const VOICE = 'marin';
-const MAX_SPEECH = 3500;
-const FLOW_TIMEOUT_MS = 8000;
-const SPEECH_TIMEOUT_MS = 18000;
-
-export default async function handler(request) {
-  if (request.method !== 'POST') return jsonError('NOT_FOUND', "We couldn't find that.", 404);
-  let body;
-  try { body = await request.json(); } catch { return jsonError('VALIDATION', 'That request was not valid.', 400); }
-  const token = String(body?.token || '');
-  const text = String(body?.text || '').trim().slice(0, MAX_SPEECH);
-  if (!token) return jsonError('SESSION_EXPIRED', 'Your session has ended. Sign in again.', 401);
-  if (!text) return jsonError('VALIDATION', 'There is nothing for Griot to say.', 400);
-
-  const session = await flowCall(token, body);
-  if (!session.ok) return new Response(JSON.stringify(session), { status: session?.error?.code === 'SESSION_EXPIRED' ? 401 : 400, headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' } });
-
-  const baseUrl = process.env.OPENAI_BASE_URL;
-  const apiKey = process.env.OPENAI_API_KEY;
-  if (!baseUrl || !apiKey) return jsonError('SERVER_ERROR', 'Griot voice is not available just now.', 503);
-
-  const spoken = text.replace(/\\bGriot\\b/gi, 'Gree-oh');
-  let response;
-  try {
-    response = await fetchWithTimeout(`${baseUrl.replace(/\\/$/, '')}/v1/audio/speech`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${apiKey}` },
-      body: JSON.stringify({
-        model: MODEL,
-        voice: VOICE,
-        input: spoken,
-        response_format: 'mp3',
-        instructions: 'Warm, grounded, intelligent and understated. Natural conversational rhythm; never announcer-like or overly cheerful. A subtle cosmopolitan British-West-African cadence is welcome if natural, never caricatured. Pronounce Gree-oh exactly as written, with no final T sound.',
-      }),
-    }, SPEECH_TIMEOUT_MS);
-  } catch { return jsonError('SERVER_ERROR', 'Griot voice could not start just now.', 502); }
-
-  if (!response.ok) return jsonError('SERVER_ERROR', 'Griot voice could not start just now.', 502);
-  const bytes = await response.arrayBuffer();
-  if (bytes.byteLength < 256) return jsonError('SERVER_ERROR', 'Griot voice returned no audio.', 502);
-  return new Response(bytes, {
-    status: 200,
-    headers: {
-      'Content-Type': response.headers.get('content-type') || 'audio/mpeg',
-      'Cache-Control': 'no-store',
-      'X-Griot-Voice': VOICE,
-      'X-Content-Type-Options': 'nosniff',
-    },
-  });
-}
-
-async function flowCall(token, requestBody) {
-  let response;
-  try {
-    response = await fetchWithTimeout(APPS_SCRIPT_URL, {
-      method: 'POST',
-      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-      body: JSON.stringify({ action: 'auth.session', payload: {}, token, requestId: String(requestBody?.requestId || `voice-${crypto.randomUUID()}`), clientVersion: '2.1.0' }),
-      redirect: 'follow',
-    }, FLOW_TIMEOUT_MS);
-  } catch { return { ok: false, error: { code: 'NETWORK', message: 'Flow Tribe could not reach the server.' }, meta: {} }; }
-  try { return await response.json(); } catch { return { ok: false, error: { code: 'SERVER_ERROR', message: 'Flow Tribe received an invalid server response.' }, meta: {} }; }
-}
-
-function jsonError(code, message, status) {
-  return new Response(JSON.stringify({ ok: false, error: { code, message }, meta: {} }), { status, headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' } });
-}
-
-async function fetchWithTimeout(url, options, timeoutMs) {
-  const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), timeoutMs);
-  try { return await fetch(url, { ...options, signal: controller.signal }); }
-  finally { clearTimeout(timer); }
-}
-`);
-
 mustReplace('netlify/functions/griot.mjs', "const OPENAI_SPEECH_VOICE = 'cedar';", "const OPENAI_SPEECH_VOICE = 'marin';");
-
-fs.writeFileSync('styles/experience-repair.css', `/* Final guided-help and voice repair. Loaded last. */
-.ft-live-tour {
-  position: fixed !important;
-  inset: 0 !important;
-  z-index: 10000 !important;
-  pointer-events: none !important;
-}
-.ft-live-tour[hidden] { display: none !important; }
-.ft-live-tour__panel,
-.ft-live-tour__panel[data-placement='top'],
-.ft-live-tour__panel[data-placement='bottom'] {
-  position: fixed !important;
-  top: auto !important;
-  right: 1.25rem !important;
-  bottom: 1.25rem !important;
-  left: auto !important;
-  width: min(30rem, calc(100vw - 2.5rem)) !important;
-  max-width: none !important;
-  height: auto !important;
-  max-height: min(62dvh, 32rem) !important;
-  padding: 1.2rem !important;
-  overflow-y: auto !important;
-  transform: none !important;
-  z-index: 10002 !important;
-  pointer-events: auto !important;
-  background: #f6f4ef !important;
-  border-radius: 1.35rem !important;
-  box-shadow: 0 1.5rem 4rem rgba(9, 46, 35, .24) !important;
-}
-.ft-live-tour-target {
-  position: relative;
-  z-index: 1000 !important;
-}
-.ft-live-tour__top,
-.ft-live-tour__meta,
-.ft-live-tour__footer { position: relative; z-index: 1; }
-.ft-live-tour__title { margin-top: .55rem !important; line-height: 1.12 !important; }
-.ft-live-tour__body { margin-top: .7rem !important; line-height: 1.5 !important; }
-
-@media (max-width: 720px) {
-  .ft-live-tour__panel,
-  .ft-live-tour__panel[data-placement='top'],
-  .ft-live-tour__panel[data-placement='bottom'] {
-    right: .65rem !important;
-    bottom: calc(var(--ft-bottom-nav-height) + .65rem + env(safe-area-inset-bottom)) !important;
-    left: .65rem !important;
-    width: auto !important;
-    max-height: 46dvh !important;
-    padding: .95rem !important;
-  }
-  .ft-live-tour__footer {
-    display: grid !important;
-    grid-template-columns: 1fr 1fr !important;
-    gap: .55rem !important;
-  }
-  .ft-live-tour__button { width: 100%; min-width: 0; }
-  .ft-live-tour__title { font-size: 1.16rem !important; }
-  .ft-live-tour__body { font-size: .92rem !important; }
-}
-`);
 
 mustReplace(
   'index.html',
@@ -297,7 +160,7 @@ contract = contract
   .replace("const mobileRepair = fs.readFileSync(new URL('../styles/mobile-repair.css', import.meta.url), 'utf8');", "const mobileRepair = fs.readFileSync(new URL('../styles/mobile-repair.css', import.meta.url), 'utf8');\nconst experienceRepair = fs.readFileSync(new URL('../styles/experience-repair.css', import.meta.url), 'utf8');\nconst voiceRuntime = fs.readFileSync(new URL('../netlify/functions/griot-voice.mjs', import.meta.url), 'utf8');")
   .replace("assert(fastChat.includes('max_tokens: 280'), 'Griot generation budget must stay bounded for responsiveness.');", "assert(fastChat.includes('max_tokens: 180'), 'Griot generation budget must stay bounded for responsiveness.');")
   .replace("assert(fastChat.includes(\"type: 'json_schema'\"), 'Griot responses must retain structured output.');", "assert(fastChat.includes(\"Return only the natural-language answer\"), 'Fast Griot must avoid structured-output latency and JSON debris.');")
-  .replace("assert(gateway.includes(\"OPENAI_SPEECH_VOICE = 'cedar'\"), 'Griot must retain one stable server voice identity.');", "assert(gateway.includes(\"OPENAI_SPEECH_VOICE = 'marin'\"), 'Fallback Griot voice must use Marin.');\nassert(voiceRuntime.includes(\"const VOICE = 'marin'\"), 'Primary Griot voice must use Marin.');\nassert(voiceRuntime.includes(\"Content-Type': response.headers.get('content-type') || 'audio/mpeg'\"), 'Primary voice endpoint must return binary audio directly.');")
+  .replace("assert(gateway.includes(\"OPENAI_SPEECH_VOICE = 'cedar'\"), 'Griot must retain one stable server voice identity.');", "assert(gateway.includes(\"OPENAI_SPEECH_VOICE = 'marin'\"), 'Fallback Griot voice must use Marin.');\nassert(voiceRuntime.includes(\"const VOICE = 'marin'\"), 'Primary Griot voice must use Marin.');\nassert(voiceRuntime.includes(\"'Content-Type': response.headers.get('content-type') || 'audio/mpeg'\"), 'Primary voice endpoint must return binary audio directly.');")
   .replace("assert(client.includes(\"call('griot.chat'\"), 'Griot client must call the conversational action.');", "assert(client.includes(\"call('griot.chat'\"), 'Griot client must call the conversational action.');\nassert(client.includes(\"call('griot.warm'\"), 'Griot must prewarm authenticated context when opened.');")
   .replace("assert(assist.includes(\"call('griot.speak'\"), 'Voice playback must use authenticated server speech first.');", "assert(assist.includes(\"/.netlify/functions/griot-voice\"), 'Primary voice playback must use the binary voice endpoint.');\nassert(assist.includes(\"call('griot.speak'\"), 'Voice playback must retain authenticated server fallback.');\nassert(assist.includes('document.body.append(tour)'), 'Guided tour must be portalled to document.body.');")
   .replace("assert(index.includes('styles/mobile-repair.css'), 'The mobile repair stylesheet must be loaded after existing Griot/tour styles.');", "assert(index.includes('styles/mobile-repair.css'), 'The mobile repair stylesheet must remain loaded.');\nassert(index.includes('styles/experience-repair.css'), 'The final experience repair stylesheet must load last.');\nassert(experienceRepair.includes('z-index: 10002'), 'Tour panel must always sit above highlighted content.');\nassert(experienceRepair.includes('max-height: 46dvh'), 'Mobile tour must remain a compact card rather than a full-screen sheet.');");
