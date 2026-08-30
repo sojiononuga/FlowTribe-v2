@@ -2,6 +2,7 @@ import { el, icon } from '../../core/dom.js';
 import { call } from '../../core/api.js';
 import { navigate } from '../../app/navigation.js';
 import { GriotControl } from './meta-ai.js';
+import { getToken } from '../../core/session.js';
 
 const VOICE_STORAGE_KEY = 'flowtribe.voice.v2';
 
@@ -178,8 +179,11 @@ export function MemberAssistControls() {
     tourButton,
     status,
     voicePanel,
-    tour,
   ]);
+
+  const existingTour = document.querySelector('body > .ft-live-tour');
+  if (existingTour && existingTour !== tour) existingTour.remove();
+  document.body.append(tour);
 
   document.addEventListener('click', (event) => {
     if (!node.contains(event.target)) {
@@ -239,7 +243,7 @@ function VoicePanel(settings, status) {
   const panel = el('div', { class: 'ft-voice-panel', attrs: { hidden: true } }, [
     el('div', { class: 'ft-voice-panel__head' }, [
       el('strong', { text: 'Griot voice' }),
-      el('span', { text: 'A small set chosen for warmth, clarity and calm.' }),
+      el('span', { text: 'One warm, natural voice chosen for Griot across devices.' }),
     ]),
     el('label', { class: 'ft-voice-panel__field' }, [el('span', { text: 'Voice' }), voiceSelect]),
     el('label', { class: 'ft-voice-panel__field' }, [
@@ -252,7 +256,7 @@ function VoicePanel(settings, status) {
   function refreshVoices() {
     voiceSelect.replaceChildren(el('option', {
       attrs: { value: 'griot-server' },
-      text: 'Griot — consistent voice',
+      text: 'Griot — warm voice',
     }));
     voiceSelect.value = 'griot-server';
     voiceSelect.disabled = true;
@@ -517,23 +521,45 @@ function speakText(text, settings, status, callbacks = {}) {
   primeVoicePlayback();
   status.textContent = 'Griot is preparing voice.';
 
-  call('griot.speak', { text: String(text || ''), rate: settings.rate }, { timeout: 35000, retry: false })
-    .then((result) => {
+  const sessionToken = getToken();
+  const spokenText = String(text || '').trim();
+  if (!sessionToken || !spokenText) {
+    speakDeviceFallback(text, settings, status, callbacks, token);
+    return;
+  }
+
+  fetch('/.netlify/functions/griot-voice', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json;charset=utf-8' },
+    body: JSON.stringify({ token: sessionToken, text: spokenText, rate: settings.rate }),
+  })
+    .then(async (response) => {
+      if (!response.ok) throw new Error('Voice endpoint unavailable');
+      const contentType = String(response.headers.get('content-type') || 'audio/mpeg');
+      if (!contentType.startsWith('audio/')) throw new Error('Voice endpoint returned non-audio');
+      const bytes = new Uint8Array(await response.arrayBuffer());
+      if (bytes.byteLength < 256) throw new Error('Voice endpoint returned empty audio');
       if (token !== voiceRequestToken) return;
-      const encoded = String(result?.audioBase64 || '');
-      if (!encoded) throw new Error('No speech audio returned.');
-      return playServerVoice(encoded, String(result?.mimeType || 'audio/mpeg'), token, status, callbacks);
+      return playServerVoiceBytes(bytes, contentType.split(';')[0] || 'audio/mpeg', token, status, callbacks);
     })
-    .catch(() => {
-      if (token === voiceRequestToken) speakDeviceFallback(text, settings, status, callbacks, token);
+    .catch(async () => {
+      if (token !== voiceRequestToken) return;
+      try {
+        const result = await call('griot.speak', { text: spokenText, rate: settings.rate }, { timeout: 18000, retry: false });
+        if (token !== voiceRequestToken) return;
+        const encoded = String(result?.audioBase64 || '');
+        if (!encoded) throw new Error('No fallback audio');
+        const binary = window.atob(encoded);
+        const bytes = new Uint8Array(binary.length);
+        for (let i = 0; i < binary.length; i += 1) bytes[i] = binary.charCodeAt(i);
+        return playServerVoiceBytes(bytes, String(result?.mimeType || 'audio/mpeg'), token, status, callbacks);
+      } catch {
+        if (token === voiceRequestToken) speakDeviceFallback(text, settings, status, callbacks, token);
+      }
     });
 }
 
-async function playServerVoice(encoded, mimeType, token, status, callbacks) {
-  const binary = window.atob(encoded);
-  const bytes = new Uint8Array(binary.length);
-  for (let i = 0; i < binary.length; i += 1) bytes[i] = binary.charCodeAt(i);
-
+async function playServerVoiceBytes(bytes, mimeType, token, status, callbacks) {
   const context = primeVoicePlayback();
   if (context) {
     try {

@@ -68,11 +68,6 @@ export function installTourQualityGuards() {
     attributeFilter: ['class', 'hidden'],
   });
 
-  document.addEventListener('flowtribe:tour-open', () => {
-    const trigger = document.querySelector('[aria-label="Show me round Flow Tribe"]');
-    if (trigger) trigger.click();
-  });
-
   window.addEventListener('hashchange', () => window.setTimeout(retarget, 60));
   window.addEventListener('resize', retarget);
   retarget();
