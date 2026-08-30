@@ -1,0 +1,107 @@
+/* Mobile repair pass: Griot, tour layering and dashboard metric centring. */
+
+/* Keep both circular dashboard metrics optically centred. */
+.ft-dashboard .ft-flow-hero__score {
+  box-sizing: border-box;
+  display: grid !important;
+  place-content: center;
+  justify-items: center;
+  align-items: center;
+  gap: .18rem !important;
+  padding: 0 !important;
+  text-align: center;
+}
+
+.ft-dashboard .ft-flow-hero__score-value,
+.ft-dashboard .ft-flow-hero__score-label {
+  display: block;
+  margin: 0;
+  line-height: 1 !important;
+  text-align: center;
+}
+
+.ft-ring__label {
+  display: grid !important;
+  place-content: center;
+  justify-items: center;
+  align-items: center;
+  gap: .22rem !important;
+  padding: 0;
+  text-align: center;
+}
+
+.ft-ring__count,
+.ft-ring__goal {
+  display: block;
+  margin: 0;
+  text-align: center;
+}
+
+.ft-ring__count { line-height: .9 !important; }
+.ft-ring__goal { line-height: 1.08 !important; }
+
+/* Voice settings and guided tour must never stack on top of each other. */
+html.ft-live-tour-open .ft-voice-panel {
+  display: none !important;
+}
+
+@media (max-width: 720px) {
+  /* Griot is a sheet, not a full-screen takeover. Leaving the header visible
+     means the Ask Griot control remains an obvious, reliable close toggle. */
+  .ft-meta-ai__panel {
+    top: calc(var(--ft-griot-vv-offset, 0px) + 5.35rem) !important;
+    right: .6rem !important;
+    bottom: calc(var(--ft-bottom-nav-height) + max(.55rem, env(safe-area-inset-bottom))) !important;
+    left: .6rem !important;
+    width: auto !important;
+    height: auto !important;
+    max-width: none !important;
+    max-height: none !important;
+    border-radius: 1.35rem !important;
+  }
+
+  .ft-meta-ai__head {
+    position: sticky;
+    top: 0;
+    z-index: 3;
+    background: #f6f4ef;
+    border-radius: 1.35rem 1.35rem 0 0;
+  }
+
+  .ft-meta-ai__messages {
+    padding: .9rem !important;
+  }
+
+  .ft-meta-ai__message {
+    max-width: 88% !important;
+    font-size: .93rem !important;
+    line-height: 1.48 !important;
+  }
+
+  .ft-meta-ai__quick {
+    padding: 0 .9rem .65rem !important;
+  }
+
+  .ft-meta-ai__composer {
+    padding: .65rem .75rem calc(.7rem + env(safe-area-inset-bottom)) !important;
+  }
+
+  .ft-dashboard .ft-flow-hero__score {
+    margin-inline: auto;
+  }
+
+  .ft-ring {
+    margin-inline: auto;
+  }
+
+  /* Keep the tour itself below the header and above bottom navigation. */
+  .ft-live-tour__panel {
+    top: 5.35rem !important;
+    right: .75rem !important;
+    bottom: calc(var(--ft-bottom-nav-height) + .75rem) !important;
+    left: .75rem !important;
+    width: auto !important;
+    max-height: none !important;
+    overflow-y: auto;
+  }
+}

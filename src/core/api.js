@@ -5,7 +5,7 @@
  * through `call(action, payload)`.
  *
  * Most actions go to Apps Script. Griot chat and speech are deliberately
- * routed through the same-origin Netlify Function so their AI runtime can be
+ * routed through same-origin Netlify Functions so their AI runtime can be
  * deployed independently while still validating the member's Flow session
  * against Apps Script.
  *
@@ -33,7 +33,6 @@ import { config } from './config.js';
 import { AppError, ErrorCode, toAppError } from './errors.js';
 import { clearSession, getToken, touchSession } from './session.js';
 
-/** Actions that must never carry a token. */
 const PUBLIC_ACTIONS = new Set([
   'system.health',
   'auth.register',
@@ -41,35 +40,17 @@ const PUBLIC_ACTIONS = new Set([
   'auth.checkUsername',
 ]);
 
-/** Griot actions are served by the same-origin Netlify Function. */
-const GRIOT_ACTIONS = new Set(['griot.chat', 'griot.speak']);
-const GRIOT_ENDPOINT = '/.netlify/functions/griot';
+const GRIOT_CHAT_ENDPOINT = '/.netlify/functions/griot-chat';
+const GRIOT_FALLBACK_ENDPOINT = '/.netlify/functions/griot';
+const GRIOT_SPEECH_ENDPOINT = GRIOT_FALLBACK_ENDPOINT;
 
-/** Fired on the window when the server ends a session. */
 export const SESSION_EXPIRED_EVENT = 'flowtribe:session-expired';
-
-/** Fired when the server demands a PIN change before anything else. */
 export const MUST_CHANGE_PIN_EVENT = 'flowtribe:must-change-pin';
 
-/**
- * Call a server action.
- *
- * @param {string} action   Dotted action name, e.g. 'submission.create'.
- * @param {Object} [payload]
- * @param {Object} [options]
- * @param {number} [options.timeout]    Overrides config.api.timeoutMs.
- * @param {boolean} [options.retry]     Allow one retry on a transport failure.
- * @param {AbortSignal} [options.signal]
- * @returns {Promise<Object>} the `data` object from a successful envelope
- * @throws {AppError}
- */
 export async function call(action, payload = {}, options = {}) {
-  if (!isConfigured()) {
-    throw new AppError(ErrorCode.NOT_CONFIGURED);
-  }
+  if (!isConfigured()) throw new AppError(ErrorCode.NOT_CONFIGURED);
 
   const { timeout = config.api.timeoutMs, retry = true, signal } = options;
-
   const body = {
     action,
     payload,
@@ -79,9 +60,7 @@ export async function call(action, payload = {}, options = {}) {
 
   if (!PUBLIC_ACTIONS.has(action)) {
     const token = getToken();
-    if (!token) {
-      throw new AppError(ErrorCode.SESSION_EXPIRED);
-    }
+    if (!token) throw new AppError(ErrorCode.SESSION_EXPIRED);
     body.token = token;
   }
 
@@ -89,22 +68,16 @@ export async function call(action, payload = {}, options = {}) {
     return await send(body, { timeout, signal });
   } catch (error) {
     const appError = toAppError(error);
-
-    if (retry && appError.retryable) {
-      return send(body, { timeout, signal });
-    }
-
+    if (retry && appError.retryable) return send(body, { timeout, signal });
     throw appError;
   }
 }
 
-/** Check whether the core Apps Script deployment URL has been configured. */
 export function isConfigured() {
   const url = config.api.baseUrl;
   return Boolean(url) && !url.includes('PASTE_YOUR') && url.startsWith('https://');
 }
 
-/** Probe the core deployment. */
 export async function health() {
   try {
     const data = await call('system.health', {}, { retry: false, timeout: 8000 });
@@ -114,22 +87,50 @@ export async function health() {
   }
 }
 
-/* -------------------------------------------------------------------------
- * Internals
- * ---------------------------------------------------------------------- */
-
 async function send(body, { timeout, signal }) {
+  const isGriot = body.action === 'griot.chat' || body.action === 'griot.speak';
+  const target = body.action === 'griot.chat'
+    ? GRIOT_CHAT_ENDPOINT
+    : body.action === 'griot.speak'
+      ? GRIOT_SPEECH_ENDPOINT
+      : config.api.baseUrl;
+
+  let response = await transport(target, body, { timeout, signal, isGriot });
+
+  // The fast chat runtime is an optimisation, not a single point of failure.
+  // During deploy propagation—or if it is ever unavailable—use the established
+  // Griot runtime with the same authenticated request rather than failing the
+  // member's conversation.
+  if (body.action === 'griot.chat' && response.status === 404) {
+    response = await transport(GRIOT_FALLBACK_ENDPOINT, body, { timeout, signal, isGriot: true });
+  }
+
+  const text = await response.text();
+  let envelope;
+  try {
+    envelope = JSON.parse(text);
+  } catch (error) {
+    // A non-JSON fast-endpoint response can occur while a Netlify function is
+    // propagating. Retry once against the stable Griot runtime.
+    if (body.action === 'griot.chat' && response.url?.includes('/griot-chat')) {
+      const fallback = await transport(GRIOT_FALLBACK_ENDPOINT, body, { timeout, signal, isGriot: true });
+      return parseEnvelope(await fallback.text());
+    }
+    console.error('[api] non-JSON response', text.slice(0, 500));
+    throw new AppError(ErrorCode.MALFORMED_RESPONSE, undefined, { cause: error });
+  }
+
+  return acceptEnvelope(envelope);
+}
+
+async function transport(target, body, { timeout, signal, isGriot }) {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeout);
   const onExternalAbort = () => controller.abort();
   if (signal) signal.addEventListener('abort', onExternalAbort);
 
-  const isGriot = GRIOT_ACTIONS.has(body.action);
-  const target = isGriot ? GRIOT_ENDPOINT : config.api.baseUrl;
-
-  let response;
   try {
-    response = await fetch(target, {
+    return await fetch(target, {
       method: 'POST',
       headers: {
         'Content-Type': isGriot ? 'application/json;charset=utf-8' : 'text/plain;charset=utf-8',
@@ -139,43 +140,37 @@ async function send(body, { timeout, signal }) {
       signal: controller.signal,
     });
   } catch (error) {
-    if (error.name === 'AbortError') {
-      throw new AppError(ErrorCode.TIMEOUT, undefined, { cause: error });
-    }
+    if (error.name === 'AbortError') throw new AppError(ErrorCode.TIMEOUT, undefined, { cause: error });
     throw new AppError(ErrorCode.NETWORK, undefined, { cause: error });
   } finally {
     clearTimeout(timer);
     if (signal) signal.removeEventListener('abort', onExternalAbort);
   }
+}
 
-  const text = await response.text();
-
+function parseEnvelope(text) {
   let envelope;
   try {
     envelope = JSON.parse(text);
   } catch (error) {
-    console.error('[api] non-JSON response', text.slice(0, 500));
+    console.error('[api] non-JSON response', String(text).slice(0, 500));
     throw new AppError(ErrorCode.MALFORMED_RESPONSE, undefined, { cause: error });
   }
+  return acceptEnvelope(envelope);
+}
 
+function acceptEnvelope(envelope) {
   if (!envelope || typeof envelope !== 'object' || !('ok' in envelope)) {
     throw new AppError(ErrorCode.MALFORMED_RESPONSE);
   }
 
-  if (envelope.ok === false) {
-    throw buildError(envelope.error);
-  }
-
-  if (envelope.meta?.sessionExpiresAt) {
-    touchSession(envelope.meta.sessionExpiresAt);
-  }
-
+  if (envelope.ok === false) throw buildError(envelope.error);
+  if (envelope.meta?.sessionExpiresAt) touchSession(envelope.meta.sessionExpiresAt);
   return envelope.data ?? {};
 }
 
 function buildError(raw) {
   const code = raw?.code || ErrorCode.SERVER_ERROR;
-
   const error = new AppError(code, raw?.message, {
     field: raw?.field,
     details: raw?.details,
@@ -186,10 +181,7 @@ function buildError(raw) {
     dispatch(SESSION_EXPIRED_EVENT);
   }
 
-  if (error.code === ErrorCode.MUST_CHANGE_PIN) {
-    dispatch(MUST_CHANGE_PIN_EVENT);
-  }
-
+  if (error.code === ErrorCode.MUST_CHANGE_PIN) dispatch(MUST_CHANGE_PIN_EVENT);
   return error;
 }
 
