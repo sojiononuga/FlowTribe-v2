@@ -17,6 +17,20 @@ jobs:
         with:
           ref: main
 
+      - name: Set up Node 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Run release verification
+        shell: bash
+        run: |
+          set -euo pipefail
+          cp src/core/config.example.js src/core/config.js
+          npm install --no-audit --no-fund --package-lock=false
+          npx playwright install --with-deps chromium
+          npm run verify
+
       - name: Prepare production frontend
         shell: bash
         run: |
@@ -119,4 +133,18 @@ jobs:
           cat netlify-deploy.json
           echo "Production site: ${{ steps.site.outputs.site_url }}"
 
-# forest and cream palette release trigger: 2026-08-27
+      - name: Verify public voice and repaired assets
+        shell: bash
+        run: |
+          set -euo pipefail
+          SITE='https://dainty-frangollo-1063b3.netlify.app'
+          curl -fsSL --retry 5 --retry-delay 2 "$SITE/src/features/showcase/showcase.js" | grep -Fq "preview: 'intro'"
+          curl -fsSL --retry 5 --retry-delay 2 "$SITE/src/features/showcase/meta-ai.js" | grep -Fq "aria-label': 'Close Griot"
+          curl -fsSL --retry 5 --retry-delay 2 \
+            -H 'Content-Type: application/json' \
+            --data '{"preview":"intro"}' \
+            "$SITE/.netlify/functions/griot-voice" \
+            -o /tmp/griot-preview.audio
+          test "$(wc -c < /tmp/griot-preview.audio)" -gt 256
+
+# voice, tour and Griot acceptance release trigger: 2026-08-31
