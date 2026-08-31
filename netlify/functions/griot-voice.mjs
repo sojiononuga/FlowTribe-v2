@@ -4,6 +4,13 @@ const VOICE = 'marin';
 const MAX_SPEECH = 3500;
 const FLOW_TIMEOUT_MS = 8000;
 const SPEECH_TIMEOUT_MS = 18000;
+const PUBLIC_PREVIEWS = Object.freeze({
+  intro: 'Welcome to Flow Tribe. When life changes the plan, Flow changes the path, not the goal. Start with what matters. We will help you keep moving.',
+  direction: 'Start with a goal that matters. Flow keeps the destination visible while the route is allowed to change.',
+  action: 'Turn intention into one useful action. Flow keeps the next credible move clear enough to act on now.',
+  adapt: 'When reality changes, change the path. Flow uses disruption as new information and helps you find a smaller or better route.',
+  momentum: 'Make recovery count as progress. Evidence, return and shared momentum keep progress visible through interruption.',
+});
 
 export default async function handler(request) {
   if (request.method !== 'POST') return jsonError('NOT_FOUND', "We couldn't find that.", 404);
@@ -16,16 +23,20 @@ export default async function handler(request) {
   }
 
   const token = String(body?.token || '');
-  const text = String(body?.text || '').trim().slice(0, MAX_SPEECH);
-  if (!token) return jsonError('SESSION_EXPIRED', 'Your session has ended. Sign in again.', 401);
+  const preview = String(body?.preview || '');
+  const publicText = PUBLIC_PREVIEWS[preview] || '';
+  const text = (publicText || String(body?.text || '').trim()).slice(0, MAX_SPEECH);
+  if (!token && !publicText) return jsonError('SESSION_EXPIRED', 'Your session has ended. Sign in again.', 401);
   if (!text) return jsonError('VALIDATION', 'There is nothing for Griot to say.', 400);
 
-  const session = await flowCall(token, body);
-  if (!session.ok) {
-    return new Response(JSON.stringify(session), {
-      status: session?.error?.code === 'SESSION_EXPIRED' ? 401 : 400,
-      headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' },
-    });
+  if (!publicText) {
+    const session = await flowCall(token, body);
+    if (!session.ok) {
+      return new Response(JSON.stringify(session), {
+        status: session?.error?.code === 'SESSION_EXPIRED' ? 401 : 400,
+        headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' },
+      });
+    }
   }
 
   const baseUrl = process.env.OPENAI_BASE_URL;
@@ -35,7 +46,7 @@ export default async function handler(request) {
   const spoken = text.replace(/\bGriot\b/gi, 'Gree-oh');
   let response;
   try {
-    response = await fetchWithTimeout(`${baseUrl.replace(/\/$/, '')}/v1/audio/speech`, {
+    response = await fetchWithTimeout(`${openAiBase(baseUrl)}/audio/speech`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -66,6 +77,10 @@ export default async function handler(request) {
       'X-Content-Type-Options': 'nosniff',
     },
   });
+}
+
+function openAiBase(value) {
+  return String(value || '').replace(/\/$/, '').replace(/\/v1$/, '') + '/v1';
 }
 
 async function flowCall(token, requestBody) {
