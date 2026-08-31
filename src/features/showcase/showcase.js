@@ -24,21 +24,25 @@ const COMPASS_PATHS = [
 
 const TOUR_STEPS = [
   {
+    preview: 'direction',
     eyebrow: '1 · DIRECTION',
     title: 'Start with a goal that matters.',
     body: 'Flow begins with the destination, not a perfect timetable. The goal stays visible while the route is allowed to change.',
   },
   {
+    preview: 'action',
     eyebrow: '2 · NEXT MOVE',
     title: 'Turn intention into one useful action.',
     body: 'Instead of handing you a wall of tasks, Flow keeps the next credible move obvious enough to act on now.',
   },
   {
+    preview: 'adapt',
     eyebrow: '3 · ADAPT',
     title: 'When reality changes, change the path.',
     body: 'Time, energy, money, work and life move. Flow treats disruption as new information and helps you find a smaller or better route.',
   },
   {
+    preview: 'momentum',
     eyebrow: '4 · MOMENTUM',
     title: 'Make recovery count as progress.',
     body: 'Evidence, return and shared Tribe momentum show that progress can survive interruption instead of being erased by it.',
@@ -73,7 +77,7 @@ export function FlowShowcase() {
     href: '#/demo',
   });
 
-  const tour = GuidedTour();
+  const tour = GuidedTour({ voiceButton, griotLink, demoLink, status: voiceStatus });
   const tourButton = ShowcaseAction({
     label: 'Show me round',
     description: 'A 60-second guided tour.',
@@ -114,34 +118,27 @@ function ShowcaseAction({ label, description, iconPaths, href, onClick }) {
 }
 
 function speakFlow(button, status) {
-  if (!('speechSynthesis' in window) || typeof SpeechSynthesisUtterance === 'undefined') {
-    status.textContent = 'Voice is not available in this browser. The rest of Flow still works normally.';
-    return;
-  }
-
-  window.speechSynthesis.cancel();
-  const utterance = new SpeechSynthesisUtterance(
-    'Welcome to Flow Tribe. When life changes the plan, Flow changes the path, not the goal. Start with what matters. We will help you keep moving.',
-  );
-  utterance.rate = 0.94;
-  utterance.pitch = 1;
-  utterance.onstart = () => {
+  speakPreview('intro', {
+    onPreparing: () => { status.textContent = 'Flow is preparing the voice.'; },
+    onStart: () => {
     button.classList.add('ft-showcase-action--active');
     status.textContent = 'Flow is speaking.';
-  };
-  utterance.onend = () => {
+    },
+    onEnd: () => {
     button.classList.remove('ft-showcase-action--active');
     status.textContent = 'Voice ready. Tap again to replay.';
-  };
-  utterance.onerror = () => {
+    },
+    onError: () => {
     button.classList.remove('ft-showcase-action--active');
-    status.textContent = 'Voice could not start. You can still use the demo or guided tour.';
-  };
-  window.speechSynthesis.speak(utterance);
+    status.textContent = 'Voice could not start. Check your sound and try again.';
+    },
+  });
 }
 
-function GuidedTour() {
+function GuidedTour({ voiceButton, griotLink, demoLink, status }) {
   let index = 0;
+  let highlighted = null;
+  const targets = [voiceButton, griotLink, demoLink, null];
 
   const eyebrow = el('p', { class: 'ft-tour__eyebrow' });
   const title = el('h2', { class: 'ft-tour__title', attrs: { id: 'flow-tour-title' } });
@@ -201,12 +198,22 @@ function GuidedTour() {
 
   function render() {
     const step = TOUR_STEPS[index];
+    stopPreview();
+    if (highlighted) highlighted.classList.remove('ft-showcase-action--tour-target');
+    highlighted = targets[index];
+    if (highlighted) highlighted.classList.add('ft-showcase-action--tour-target');
     eyebrow.textContent = step.eyebrow;
     title.textContent = step.title;
     body.textContent = step.body;
     counter.textContent = `${index + 1} of ${TOUR_STEPS.length}`;
     back.disabled = index === 0;
     next.textContent = index === TOUR_STEPS.length - 1 ? 'Enter Flow' : 'Next';
+    speakPreview(step.preview, {
+      onPreparing: () => { status.textContent = 'Tour narration is preparing.'; },
+      onStart: () => { status.textContent = `Tour narration ${index + 1} of ${TOUR_STEPS.length}.`; },
+      onEnd: () => { status.textContent = 'Tour narration ready.'; },
+      onError: () => { status.textContent = 'Tour narration could not start. You can continue with Next.'; },
+    });
   }
 
   function open() {
@@ -218,6 +225,9 @@ function GuidedTour() {
   }
 
   function close() {
+    stopPreview();
+    if (highlighted) highlighted.classList.remove('ft-showcase-action--tour-target');
+    highlighted = null;
     node.hidden = true;
     document.documentElement.classList.remove('ft-tour-open');
   }
@@ -226,6 +236,107 @@ function GuidedTour() {
   node.close = close;
   render();
   return node;
+}
+
+let previewAudio = null;
+let previewUrl = '';
+let previewSource = null;
+let previewContext = null;
+let previewToken = 0;
+
+function speakPreview(preview, callbacks = {}) {
+  const token = ++previewToken;
+  stopPreview({ preserveToken: true });
+  const context = primePreviewAudio();
+  callbacks.onPreparing?.();
+
+  fetch('/.netlify/functions/griot-voice', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json;charset=utf-8' },
+    body: JSON.stringify({ preview }),
+  }).then(async (response) => {
+    if (!response.ok) throw new Error('Voice endpoint unavailable');
+    const contentType = String(response.headers.get('content-type') || 'audio/mpeg');
+    if (!contentType.startsWith('audio/')) throw new Error('Voice endpoint returned non-audio');
+    const bytes = await response.arrayBuffer();
+    if (bytes.byteLength < 256 || token !== previewToken) throw new Error('Voice endpoint returned no audio');
+    if (context) {
+      try {
+        if (context.state === 'suspended') await context.resume();
+        if (context.state !== 'running' || token !== previewToken) throw new Error('Audio context unavailable');
+        const buffer = await context.decodeAudioData(bytes.slice(0));
+        if (token !== previewToken) return;
+        const source = context.createBufferSource();
+        previewSource = source;
+        source.buffer = buffer;
+        source.connect(context.destination);
+        source.onended = () => {
+          if (token !== previewToken) return;
+          previewSource = null;
+          callbacks.onEnd?.();
+        };
+        source.start(0);
+        callbacks.onStart?.();
+        return;
+      } catch { /* HTMLAudio remains the compatibility fallback. */ }
+    }
+    await playPreviewWithAudio(bytes, contentType, token, callbacks);
+  }).catch(() => {
+    if (token !== previewToken) return;
+    stopPreview({ preserveToken: true });
+    callbacks.onError?.();
+  });
+}
+
+function primePreviewAudio() {
+  const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+  if (!AudioContextClass) return null;
+  try {
+    if (!previewContext) previewContext = new AudioContextClass();
+    if (previewContext.state === 'suspended') previewContext.resume().catch(() => {});
+    return previewContext;
+  } catch { return null; }
+}
+
+async function playPreviewWithAudio(bytes, contentType, token, callbacks) {
+  previewUrl = URL.createObjectURL(new Blob([bytes], { type: contentType }));
+  const audio = new Audio(previewUrl);
+  previewAudio = audio;
+  audio.preload = 'auto';
+  audio.setAttribute('playsinline', '');
+  audio.onplay = () => { if (token === previewToken) callbacks.onStart?.(); };
+  audio.onended = () => {
+    if (token !== previewToken) return;
+    stopPreview({ preserveToken: true });
+    callbacks.onEnd?.();
+  };
+  audio.onerror = () => {
+    if (token !== previewToken) return;
+    stopPreview({ preserveToken: true });
+    callbacks.onError?.();
+  };
+  await audio.play();
+}
+
+function stopPreview({ preserveToken = false } = {}) {
+  if (!preserveToken) previewToken += 1;
+  if (previewSource) {
+    previewSource.onended = null;
+    try { previewSource.stop(); } catch { /* Already stopped. */ }
+    try { previewSource.disconnect(); } catch { /* Already disconnected. */ }
+    previewSource = null;
+  }
+  if (previewAudio) {
+    previewAudio.onplay = null;
+    previewAudio.onended = null;
+    previewAudio.onerror = null;
+    try { previewAudio.pause(); } catch { /* Already stopped. */ }
+    previewAudio = null;
+  }
+  if (previewUrl) {
+    URL.revokeObjectURL(previewUrl);
+    previewUrl = '';
+  }
 }
 
 export default FlowShowcase;

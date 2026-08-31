@@ -93,6 +93,13 @@ export function GriotControl({ status } = {}) {
     text: 'Send',
   });
 
+  const closeButton = el('button', {
+    class: 'ft-meta-ai__close',
+    attrs: { type: 'button', 'aria-label': 'Close Griot' },
+    text: '×',
+    on: { click: () => close() },
+  });
+
   const panel = el('section', {
     class: 'ft-meta-ai__panel ft-griot__panel',
     attrs: { hidden: true, 'aria-label': 'Griot', role: 'dialog', 'aria-modal': 'false' },
@@ -102,7 +109,7 @@ export function GriotControl({ status } = {}) {
         el('strong', { text: 'Griot' }),
         el('p', { text: 'Your Flow companion. Talk naturally — Griot works from your direction, progress, constraints and this conversation.' }),
       ]),
-      el('div', { class: 'ft-griot__head-actions' }, [helpBadge, speakButton]),
+      el('div', { class: 'ft-griot__head-actions' }, [helpBadge, speakButton, closeButton]),
     ]),
     messages,
     el('div', { class: 'ft-meta-ai__quick' }, [
